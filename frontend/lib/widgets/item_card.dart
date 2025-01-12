@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/item.dart';
 
-class ItemCard extends StatelessWidget {
-  final Item item;
+class TaskCard extends StatelessWidget {
+  final Task task;
+  final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
-  const ItemCard({super.key, required this.item});
+  TaskCard({super.key, required this.task});
 
   @override
   Widget build(BuildContext context) {
@@ -15,15 +17,49 @@ class ItemCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              item.title,
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                        ),
+                  ),
+                ),
+                if (task.isCompleted)
+                  const Icon(Icons.check_circle, color: Colors.green),
+              ],
             ),
-            const SizedBox(height: 8.0),
-            Text(
-              item.description,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            if (task.parentTaskId != null) ...[
+              const SizedBox(height: 4.0),
+              Text(
+                'Subtask of #${task.parentTaskId}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            if (task.dueDate != null) ...[
+              const SizedBox(height: 8.0),
+              Text(
+                'Due: ${_dateFormat.format(task.dueDate!)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+            if (task.comments.isNotEmpty) ...[
+              const SizedBox(height: 8.0),
+              const Text('Comments:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...task.comments.map((comment) => Padding(
+                    padding: const EdgeInsets.only(left: 8.0, top: 4.0),
+                    child: Text('• $comment'),
+                  )),
+            ],
+            if (task.completedAt != null) ...[
+              const SizedBox(height: 8.0),
+              Text(
+                'Completed: ${_dateFormat.format(task.completedAt!)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),

@@ -1,22 +1,30 @@
 import '../models/item.dart';
+import 'package:intl/intl.dart';
 
 class MockDataService {
-  List<Item> getItems() {
+  List<Task> getTasks() {
     return [
-      Item(
+      Task(
         id: 1,
-        title: 'First Item',
-        description: 'This is the first item in our list',
+        title: 'Complete Project Proposal',
+        comments: ['Initial draft done', 'Needs review'],
+        dueDate: DateTime.now().add(const Duration(days: 7)),
+        isCompleted: false,
       ),
-      Item(
+      Task(
         id: 2,
-        title: 'Second Item',
-        description: 'This is the second item in our list',
+        title: 'Review Team Updates',
+        comments: ['Team A submitted', 'Waiting for Team B'],
+        dueDate: DateTime.now().add(const Duration(days: 2)),
+        isCompleted: true,
+        completedAt: DateTime.now().subtract(const Duration(hours: 3)),
       ),
-      Item(
+      Task(
         id: 3,
-        title: 'Third Item',
-        description: 'This is the third item in our list',
+        title: 'Update Documentation',
+        comments: ['Started updating API docs'],
+        parentTaskId: 1,
+        isCompleted: false,
       ),
     ];
   }

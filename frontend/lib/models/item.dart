@@ -1,11 +1,19 @@
-class Item {
+class Task {
   final int id;
   final String title;
-  final String description;
+  final List<String> comments;
+  final DateTime? dueDate;
+  final int? parentTaskId;
+  final bool isCompleted;
+  final DateTime? completedAt;
 
-  Item({
+  Task({
     required this.id,
     required this.title,
-    required this.description,
+    this.comments = const [],
+    this.dueDate,
+    this.parentTaskId,
+    this.isCompleted = false,
+    this.completedAt,
   });
 }
