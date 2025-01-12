@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/mock_data_service.dart';
-import 'widgets/item_card.dart';
+import 'widgets/task_card.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,17 +28,17 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mockDataService = MockDataService();
-    final items = mockDataService.getItems();
+    final tasks = mockDataService.getTasks();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Items List'),
+        title: const Text('Tasks List'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: ListView.builder(
-        itemCount: items.length,
+        itemCount: tasks.length,
         itemBuilder: (context, index) {
-          return ItemCard(item: items[index]);
+          return TaskCard(task: tasks[index]);
         },
       ),
     );
