@@ -6,10 +6,12 @@ class Task {
   final int? parentTaskId;
   final bool isCompleted;
   final DateTime? completedAt;
+  final int taskListId;
 
   Task({
     required this.id,
     required this.title,
+    required this.taskListId,
     this.comments = const [],
     this.dueDate,
     this.parentTaskId,
