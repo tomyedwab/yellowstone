@@ -247,4 +247,19 @@ class MockDataService extends ChangeNotifier {
     
     notifyListeners();
   }
+
+  int _getNextTaskListId() {
+    return _taskLists.fold(0, (max, list) => list.id > max ? list.id : max) + 1;
+  }
+
+  void createTaskList(String title, TaskListCategory category) {
+    final newList = TaskList(
+      id: _getNextTaskListId(),
+      title: title,
+      category: category,
+    );
+    
+    _taskLists.add(newList);
+    notifyListeners();
+  }
 }

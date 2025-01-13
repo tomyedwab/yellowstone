@@ -78,7 +78,33 @@ class _TemplatesPageState extends State<TemplatesPage> {
               leading: const Icon(Icons.add),
               title: const Text('Create new template'),
               onTap: () {
-                // TODO: Implement new template creation
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Create New Template'),
+                    content: TextField(
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter template title',
+                      ),
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          _mockDataService.createTaskList(
+                            value,
+                            TaskListCategory.template,
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('CANCEL'),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ),

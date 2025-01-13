@@ -95,7 +95,33 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
               leading: const Icon(Icons.add),
               title: const Text('Create new list'),
               onTap: () {
-                // TODO: Implement new list creation
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Create New List'),
+                    content: TextField(
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter list title',
+                      ),
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          _mockDataService.createTaskList(
+                            value,
+                            TaskListCategory.toDoList,
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('CANCEL'),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ),
