@@ -70,7 +70,8 @@ class MockDataService extends ChangeNotifier {
 
   List<TaskList> getTaskLists({bool includeArchived = false}) {
     return List.unmodifiable(
-      _taskLists.where((list) => includeArchived || !list.archived).toList(),
+      _taskLists.where((list) => includeArchived || !list.archived).toList()
+    );
   }
 
   TaskList getTaskListById(int taskListId) {
