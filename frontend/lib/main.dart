@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/mock_data_service.dart';
 import 'models/task_list.dart';
 import 'pages/task_list_view.dart';
+import 'pages/archived_lists_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +19,48 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const RootPage(),
+    );
+  }
+}
+
+class RootPage extends StatefulWidget {
+  const RootPage({super.key});
+
+  @override
+  State<RootPage> createState() => _RootPageState();
+}
+
+class _RootPageState extends State<RootPage> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _pages = [
+    HomePage(),
+    ArchivedListsPage(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: NavigationBar(
+        onDestinationSelected: (int index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        selectedIndex: _selectedIndex,
+        destinations: const <NavigationDestination>[
+          NavigationDestination(
+            icon: Icon(Icons.list),
+            label: 'Lists',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.archive),
+            label: 'Archived',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -55,7 +97,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Lists'),
+        title: const Text('Active Lists'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: ReorderableListView.builder(
