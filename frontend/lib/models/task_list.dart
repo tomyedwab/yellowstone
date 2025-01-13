@@ -10,11 +10,13 @@ class TaskList {
   final String title;
   final TaskListCategory category;
   final List<int> taskIds;
+  final bool archived;
 
   TaskList({
     required this.id,
     required this.title,
     required this.category,
     this.taskIds = const [],
+    this.archived = false,
   });
 }

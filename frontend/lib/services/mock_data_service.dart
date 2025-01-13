@@ -68,8 +68,9 @@ class MockDataService extends ChangeNotifier {
     ]);
   }
 
-  List<TaskList> getTaskLists() {
-    return List.unmodifiable(_taskLists);
+  List<TaskList> getTaskLists({bool includeArchived = false}) {
+    return List.unmodifiable(
+      _taskLists.where((list) => includeArchived || !list.archived).toList(),
   }
 
   TaskList getTaskListById(int taskListId) {
@@ -211,6 +212,22 @@ class MockDataService extends ChangeNotifier {
     }
     final taskList = _taskLists.removeAt(oldIndex);
     _taskLists.insert(newIndex, taskList);
+    notifyListeners();
+  }
+
+  void archiveTaskList(int taskListId) {
+    final index = _taskLists.indexWhere((list) => list.id == taskListId);
+    if (index == -1) throw Exception('TaskList not found');
+
+    final taskList = _taskLists[index];
+    _taskLists[index] = TaskList(
+      id: taskList.id,
+      title: taskList.title,
+      category: taskList.category,
+      taskIds: taskList.taskIds,
+      archived: true,
+    );
+    
     notifyListeners();
   }
 }
