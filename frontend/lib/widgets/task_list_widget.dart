@@ -35,6 +35,38 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     setState(() {});
   }
 
+  bool _isEditing = false;
+  late TextEditingController _titleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mockDataService.addListener(_onDataChanged);
+    _titleController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _mockDataService.removeListener(_onDataChanged);
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  void _startEditing(String currentTitle) {
+    _titleController.text = currentTitle;
+    setState(() => _isEditing = true);
+  }
+
+  void _saveTitle() {
+    if (_titleController.text.isNotEmpty) {
+      _mockDataService.updateTaskList(
+        widget.taskListId,
+        title: _titleController.text,
+      );
+      setState(() => _isEditing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final taskList = _mockDataService.getTaskListById(widget.taskListId);
@@ -47,20 +79,43 @@ class _TaskListWidgetState extends State<TaskListWidget> {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  taskList.title,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+                child: _isEditing
+                    ? TextField(
+                        controller: _titleController,
+                        autofocus: true,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                        onSubmitted: (_) => _saveTitle(),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                      )
+                    : GestureDetector(
+                        onDoubleTap: () => _startEditing(taskList.title),
+                        child: Text(
+                          taskList.title,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
               ),
-              Chip(
-                label: Text(
-                  taskList.category.name,
-                  style: const TextStyle(color: Colors.white),
+              if (_isEditing) ...[
+                IconButton(
+                  icon: const Icon(Icons.check),
+                  onPressed: _saveTitle,
                 ),
-                backgroundColor: taskList.category == TaskListCategory.template
-                    ? Colors.blue
-                    : Colors.green,
-              ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(() => _isEditing = false),
+                ),
+              ] else
+                Chip(
+                  label: Text(
+                    taskList.category.name,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: taskList.category == TaskListCategory.template
+                      ? Colors.blue
+                      : Colors.green,
+                ),
             ],
           ),
         ),
