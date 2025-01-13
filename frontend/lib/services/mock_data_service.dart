@@ -187,14 +187,8 @@ class MockDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void markTaskComplete(int taskListId, int taskId, bool complete) {
-    final taskListIndex = _taskLists.indexWhere((list) => list.id == taskListId);
-    if (taskListIndex == -1) throw Exception('TaskList not found');
-
-    final taskIndex = _taskLists[taskListIndex].tasks.indexWhere((task) => task.id == taskId);
-    if (taskIndex == -1) throw Exception('Task not found');
-
-    final oldTask = _taskLists[taskListIndex].tasks[taskIndex];
+  void markTaskComplete(int taskId, bool complete) {
+    final oldTask = getTaskById(taskId);
     final newTask = Task(
       id: oldTask.id,
       title: oldTask.title,
@@ -206,15 +200,7 @@ class MockDataService extends ChangeNotifier {
       completedAt: complete ? DateTime.now() : null,
     );
 
-    final updatedTasks = List<Task>.from(_taskLists[taskListIndex].tasks);
-    updatedTasks[taskIndex] = newTask;
-
-    _taskLists[taskListIndex] = TaskList(
-      id: _taskLists[taskListIndex].id,
-      title: _taskLists[taskListIndex].title,
-      category: _taskLists[taskListIndex].category,
-      tasks: updatedTasks,
-    );
+    _tasks[taskId] = newTask;
     
     notifyListeners();
   }

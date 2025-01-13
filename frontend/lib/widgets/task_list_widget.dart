@@ -79,16 +79,15 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
                 },
                 children: [
-                  for (int index = 0; index < taskList.tasks.length; index++)
+                  for (int index = 0; index < taskList.taskIds.length; index++)
                     KeyedSubtree(
-                      key: ValueKey(taskList.tasks[index].id),
+                      key: ValueKey(taskList.taskIds[index]),
                       child: TaskCard(
                         task: _mockDataService.getTaskById(taskList.taskIds[index]),
                         category: taskList.category,
                         onComplete: () {
-                          final task = taskList.tasks[index];
+                          final task = _mockDataService.getTaskById(taskList.taskIds[index]);
                           _mockDataService.markTaskComplete(
-                            task.taskListId,
                             task.id,
                             !task.isCompleted,
                           );
