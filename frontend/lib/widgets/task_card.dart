@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
+import '../services/mock_data_service.dart';
 
 class TaskCard extends StatefulWidget {
   final Task task;
@@ -145,32 +146,32 @@ class _TaskCardState extends State<TaskCard> {
                 ],
               ],
             ),
-            if (task.parentTaskId != null) ...[
+            if (widget.task.parentTaskId != null) ...[
               const SizedBox(height: 4.0),
               Text(
-                'Subtask of #${task.parentTaskId}',
+                'Subtask of #${widget.task.parentTaskId}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-            if (task.dueDate != null) ...[
+            if (widget.task.dueDate != null) ...[
               const SizedBox(height: 8.0),
               Text(
                 'Due: ${_dateFormat.format(task.dueDate!)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
-            if (task.comments.isNotEmpty) ...[
+            if (widget.task.comments.isNotEmpty) ...[
               const SizedBox(height: 8.0),
               const Text('Comments:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...task.comments.map((comment) => Padding(
+              ...widget.task.comments.map((comment) => Padding(
                     padding: const EdgeInsets.only(left: 8.0, top: 4.0),
                     child: Text('• $comment'),
                   )),
             ],
-            if (task.completedAt != null) ...[
+            if (widget.task.completedAt != null) ...[
               const SizedBox(height: 8.0),
               Text(
-                'Completed: ${_dateFormat.format(task.completedAt!)}',
+                'Completed: ${widget._dateFormat.format(widget.task.completedAt!)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
