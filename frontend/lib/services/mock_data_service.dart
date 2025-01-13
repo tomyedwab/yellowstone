@@ -63,6 +63,13 @@ class MockDataService extends ChangeNotifier {
     return List.unmodifiable(_taskLists);
   }
 
+  TaskList getTaskListById(int taskListId) {
+    return _taskLists.firstWhere(
+      (list) => list.id == taskListId,
+      orElse: () => throw Exception('TaskList not found'),
+    );
+  }
+
   Task? getTaskById(int taskListId, int taskId) {
     final taskList = _taskLists.firstWhere(
       (list) => list.id == taskListId,

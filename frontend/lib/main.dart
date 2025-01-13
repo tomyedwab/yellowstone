@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TaskListView(taskList: taskList),
+                    builder: (context) => TaskListView(taskListId: taskList.id),
                   ),
                 );
               },

@@ -4,11 +4,11 @@ import '../services/mock_data_service.dart';
 import 'task_card.dart';
 
 class TaskListWidget extends StatefulWidget {
-  final TaskList taskList;
+  final int taskListId;
 
   const TaskListWidget({
     super.key,
-    required this.taskList,
+    required this.taskListId,
   });
 
   @override
@@ -36,6 +36,8 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final taskList = _mockDataService.getTaskListById(widget.taskListId);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -45,23 +47,23 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             children: [
               Expanded(
                 child: Text(
-                  widget.taskList.title,
+                  taskList.title,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
               Chip(
                 label: Text(
-                  widget.taskList.category.name,
+                  taskList.category.name,
                   style: const TextStyle(color: Colors.white),
                 ),
-                backgroundColor: widget.taskList.category == TaskListCategory.template
+                backgroundColor: taskList.category == TaskListCategory.template
                     ? Colors.blue
                     : Colors.green,
               ),
             ],
           ),
         ),
-        if (widget.taskList.tasks.isEmpty)
+        if (taskList.tasks.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text('No tasks in this list'),
@@ -70,13 +72,13 @@ class _TaskListWidgetState extends State<TaskListWidget> {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: widget.taskList.tasks.length,
+            itemCount: taskList.tasks.length,
             itemBuilder: (context, index) {
               return TaskCard(
-                task: widget.taskList.tasks[index],
-                category: widget.taskList.category,
+                task: taskList.tasks[index],
+                category: taskList.category,
                 onComplete: () {
-                  final task = widget.taskList.tasks[index];
+                  final task = taskList.tasks[index];
                   _mockDataService.markTaskComplete(
                     task.taskListId,
                     task.id,
