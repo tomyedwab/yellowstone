@@ -8,7 +8,7 @@ class TaskCard extends StatefulWidget {
   final Task task;
   final TaskListCategory category;
   final VoidCallback? onComplete;
-  final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
+  static final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
   const TaskCard({
     super.key,
@@ -156,7 +156,7 @@ class _TaskCardState extends State<TaskCard> {
             if (widget.task.dueDate != null) ...[
               const SizedBox(height: 8.0),
               Text(
-                'Due: ${_dateFormat.format(task.dueDate!)}',
+                'Due: ${widget._dateFormat.format(widget.task.dueDate!)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -171,7 +171,7 @@ class _TaskCardState extends State<TaskCard> {
             if (widget.task.completedAt != null) ...[
               const SizedBox(height: 8.0),
               Text(
-                'Completed: ${widget._dateFormat.format(widget.task.completedAt!)}',
+                'Completed: ${_dateFormat.format(widget.task.completedAt!)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
