@@ -46,7 +46,24 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
             child: ReorderableListView.builder(
               itemCount: taskLists.length,
               onReorder: (oldIndex, newIndex) {
-                _mockDataService.reorderTaskLists(oldIndex, newIndex);
+                final taskLists = _mockDataService.getTaskLists()
+                    .where((list) => list.category == TaskListCategory.toDoList)
+                    .toList();
+                final movedList = taskLists[oldIndex];
+                
+                // Adjust newIndex if moving downwards
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+                
+                // If newIndex is 0, place at start
+                if (newIndex == 0) {
+                  _mockDataService.reorderTaskLists(movedList.id, null);
+                } else {
+                  // Otherwise place after the item that's now at newIndex-1
+                  final afterList = taskLists[newIndex - 1];
+                  _mockDataService.reorderTaskLists(movedList.id, afterList.id);
+                }
               },
               itemBuilder: (context, index) {
                 final taskList = taskLists[index];
