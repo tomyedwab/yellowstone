@@ -4,9 +4,16 @@ import '../models/task.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
+  final TaskListCategory category;
+  final VoidCallback? onComplete;
   final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
-  TaskCard({super.key, required this.task});
+  TaskCard({
+    super.key,
+    required this.task,
+    required this.category,
+    this.onComplete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +34,17 @@ class TaskCard extends StatelessWidget {
                         ),
                   ),
                 ),
-                if (task.isCompleted)
+                if (category != TaskListCategory.template) ...[
+                  IconButton(
+                    icon: Icon(
+                      task.isCompleted ? Icons.check_circle : Icons.circle_outlined,
+                      color: task.isCompleted ? Colors.green : Colors.grey,
+                    ),
+                    onPressed: onComplete,
+                  ),
+                ] else if (task.isCompleted) ...[
                   const Icon(Icons.check_circle, color: Colors.green),
+                ],
               ],
             ),
             if (task.parentTaskId != null) ...[

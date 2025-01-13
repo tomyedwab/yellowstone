@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task_list.dart';
+import '../services/mock_data_service.dart';
 import 'task_card.dart';
 
 class TaskListWidget extends StatelessWidget {
@@ -48,7 +49,18 @@ class TaskListWidget extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: taskList.tasks.length,
             itemBuilder: (context, index) {
-              return TaskCard(task: taskList.tasks[index]);
+              return TaskCard(
+                task: taskList.tasks[index],
+                category: taskList.category,
+                onComplete: () {
+                  final task = taskList.tasks[index];
+                  MockDataService().markTaskComplete(
+                    task.taskListId,
+                    task.id,
+                    !task.isCompleted,
+                  );
+                },
+              );
             },
           ),
       ],
