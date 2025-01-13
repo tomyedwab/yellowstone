@@ -83,7 +83,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     KeyedSubtree(
                       key: ValueKey(taskList.tasks[index].id),
                       child: TaskCard(
-                        task: taskList.tasks[index],
+                        task: _mockDataService.getTaskById(taskList.taskIds[index]),
                         category: taskList.category,
                         onComplete: () {
                           final task = taskList.tasks[index];

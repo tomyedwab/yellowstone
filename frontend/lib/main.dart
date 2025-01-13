@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
             margin: const EdgeInsets.all(8.0),
             child: ListTile(
               title: Text(taskList.title),
-              subtitle: Text('${taskList.tasks.length} tasks'),
+              subtitle: Text('${taskList.taskIds.length} tasks'),
               trailing: Chip(
                 label: Text(
                   taskList.category.name,

@@ -9,12 +9,12 @@ class TaskList {
   final int id;
   final String title;
   final TaskListCategory category;
-  final List<Task> tasks;
+  final List<int> taskIds;
 
   TaskList({
     required this.id,
     required this.title,
     required this.category,
-    this.tasks = const [],
+    this.taskIds = const [],
   });
 }
