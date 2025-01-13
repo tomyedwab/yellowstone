@@ -18,23 +18,6 @@ class TaskListWidget extends StatefulWidget {
 
 class _TaskListWidgetState extends State<TaskListWidget> {
   final MockDataService _mockDataService = MockDataService();
-
-  @override
-  void initState() {
-    super.initState();
-    _mockDataService.addListener(_onDataChanged);
-  }
-
-  @override
-  void dispose() {
-    _mockDataService.removeListener(_onDataChanged);
-    super.dispose();
-  }
-
-  void _onDataChanged() {
-    setState(() {});
-  }
-
   bool _isEditing = false;
   late TextEditingController _titleController;
 
@@ -50,6 +33,10 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     _mockDataService.removeListener(_onDataChanged);
     _titleController.dispose();
     super.dispose();
+  }
+
+  void _onDataChanged() {
+    setState(() {});
   }
 
   void _startEditing(String currentTitle) {
