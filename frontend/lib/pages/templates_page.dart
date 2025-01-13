@@ -40,9 +40,12 @@ class _TemplatesPageState extends State<TemplatesPage> {
         title: const Text('Templates'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: ListView.builder(
-        itemCount: templates.length,
-        itemBuilder: (context, index) {
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: templates.length,
+              itemBuilder: (context, index) {
           final template = templates[index];
           return Card(
             margin: const EdgeInsets.all(8.0),
@@ -66,7 +69,20 @@ class _TemplatesPageState extends State<TemplatesPage> {
               },
             ),
           );
-        },
+              },
+            ),
+          ),
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Create new template'),
+              onTap: () {
+                // TODO: Implement new template creation
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -40,11 +40,14 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
         title: const Text('Active Lists'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: ReorderableListView.builder(
-        itemCount: taskLists.length,
-        onReorder: (oldIndex, newIndex) {
-          _mockDataService.reorderTaskLists(oldIndex, newIndex);
-        },
+      body: Column(
+        children: [
+          Expanded(
+            child: ReorderableListView.builder(
+              itemCount: taskLists.length,
+              onReorder: (oldIndex, newIndex) {
+                _mockDataService.reorderTaskLists(oldIndex, newIndex);
+              },
         itemBuilder: (context, index) {
           final taskList = taskLists[index];
           return Card(
@@ -83,7 +86,19 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
               },
             ),
           );
-        },
+            },
+          ),
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Create new list'),
+              onTap: () {
+                // TODO: Implement new list creation
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
