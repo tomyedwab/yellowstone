@@ -58,11 +58,15 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Task Lists'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: ListView.builder(
+      body: ReorderableListView.builder(
         itemCount: taskLists.length,
+        onReorder: (oldIndex, newIndex) {
+          _mockDataService.reorderTaskLists(oldIndex, newIndex);
+        },
         itemBuilder: (context, index) {
           final taskList = taskLists[index];
           return Card(
+            key: ValueKey(taskList.id),
             margin: const EdgeInsets.all(8.0),
             child: ListTile(
               title: Text(taskList.title),

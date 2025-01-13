@@ -204,4 +204,13 @@ class MockDataService extends ChangeNotifier {
     
     notifyListeners();
   }
+
+  void reorderTaskLists(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final taskList = _taskLists.removeAt(oldIndex);
+    _taskLists.insert(newIndex, taskList);
+    notifyListeners();
+  }
 }
