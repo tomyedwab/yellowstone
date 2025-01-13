@@ -72,24 +72,32 @@ class _TaskListWidgetState extends State<TaskListWidget> {
         else
           Column(
             children: [
-              ListView.builder(
+              ReorderableListView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: taskList.tasks.length,
-                itemBuilder: (context, index) {
-                  return TaskCard(
-                    task: taskList.tasks[index],
-                    category: taskList.category,
-                    onComplete: () {
-                      final task = taskList.tasks[index];
-                      _mockDataService.markTaskComplete(
-                        task.taskListId,
-                        task.id,
-                        !task.isCompleted,
-                      );
-                    },
-                  );
+                onReorder: (oldIndex, newIndex) {
+                  if (taskList.category != TaskListCategory.template) {
+                    _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
+                  }
                 },
+                children: [
+                  for (int index = 0; index < taskList.tasks.length; index++)
+                    KeyedSubtree(
+                      key: ValueKey(taskList.tasks[index].id),
+                      child: TaskCard(
+                        task: taskList.tasks[index],
+                        category: taskList.category,
+                        onComplete: () {
+                          final task = taskList.tasks[index];
+                          _mockDataService.markTaskComplete(
+                            task.taskListId,
+                            task.id,
+                            !task.isCompleted,
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
               if (taskList.category != TaskListCategory.template)
                 NewTaskCard(taskListId: taskList.id),
