@@ -51,11 +51,6 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                     .toList();
                 final movedList = taskLists[oldIndex];
                 
-                // Adjust newIndex if moving downwards
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
-                
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
                   _mockDataService.reorderTaskLists(movedList.id, null);

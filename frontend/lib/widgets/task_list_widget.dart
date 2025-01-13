@@ -64,42 +64,35 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             ],
           ),
         ),
-        if (taskList.taskIds.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text('No tasks in this list'),
-          )
-        else
-          Column(
-            children: [
-              ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                onReorder: (oldIndex, newIndex) {
-                  _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
-                },
-                children: [
-                  for (int index = 0; index < taskList.taskIds.length; index++)
-                    KeyedSubtree(
-                      key: ValueKey(taskList.taskIds[index]),
-                      child: TaskCard(
-                        task: _mockDataService.getTaskById(taskList.taskIds[index]),
-                        category: taskList.category,
-                        onComplete: () {
-                          final task = _mockDataService.getTaskById(taskList.taskIds[index]);
-                          _mockDataService.markTaskComplete(
-                            task.id,
-                            !task.isCompleted,
-                          );
-                        },
-                      ),
+        Column(
+          children: [
+            ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              onReorder: (oldIndex, newIndex) {
+                _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
+              },
+              children: [
+                for (int index = 0; index < taskList.taskIds.length; index++)
+                  KeyedSubtree(
+                    key: ValueKey(taskList.taskIds[index]),
+                    child: TaskCard(
+                      task: _mockDataService.getTaskById(taskList.taskIds[index]),
+                      category: taskList.category,
+                      onComplete: () {
+                        final task = _mockDataService.getTaskById(taskList.taskIds[index]);
+                        _mockDataService.markTaskComplete(
+                          task.id,
+                          !task.isCompleted,
+                        );
+                      },
                     ),
-                ],
-              ),
-              if (taskList.category != TaskListCategory.template)
-                NewTaskCard(taskListId: taskList.id),
-            ],
-          ),
+                  ),
+              ],
+            ),
+            NewTaskCard(taskListId: taskList.id),
+          ],
+        ),
       ],
     );
   }
