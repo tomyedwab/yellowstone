@@ -3,6 +3,7 @@ import 'services/mock_data_service.dart';
 import 'models/task_list.dart';
 import 'pages/task_list_view.dart';
 import 'pages/archived_lists_page.dart';
+import 'pages/templates_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,6 +37,7 @@ class _RootPageState extends State<RootPage> {
 
   static const List<Widget> _pages = [
     HomePage(),
+    TemplatesPage(),
     ArchivedListsPage(),
   ];
 
@@ -54,6 +56,10 @@ class _RootPageState extends State<RootPage> {
           NavigationDestination(
             icon: Icon(Icons.list),
             label: 'Lists',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.template_frame),
+            label: 'Templates',
           ),
           NavigationDestination(
             icon: Icon(Icons.archive),
@@ -93,7 +99,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final taskLists = _mockDataService.getTaskLists();
+    final taskLists = _mockDataService.getTaskLists()
+        .where((list) => list.category == TaskListCategory.toDoList)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
