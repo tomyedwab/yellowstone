@@ -3,18 +3,75 @@ import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends StatefulWidget {
   final Task task;
   final TaskListCategory category;
   final VoidCallback? onComplete;
   final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
-  TaskCard({
+  const TaskCard({
     super.key,
     required this.task,
     required this.category,
     this.onComplete,
   });
+
+  @override
+  State<TaskCard> createState() => _TaskCardState();
+}
+
+class _TaskCardState extends State<TaskCard> {
+  final MockDataService _mockDataService = MockDataService();
+  bool _isEditing = false;
+  late TextEditingController _titleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.task.title);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDueDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: widget.task.dueDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    
+    if (date != null) {
+      _mockDataService.updateTask(
+        widget.task.taskListId,
+        widget.task.id,
+        dueDate: date,
+      );
+    }
+  }
+
+  void _clearDueDate() {
+    _mockDataService.updateTask(
+      widget.task.taskListId,
+      widget.task.id,
+      dueDate: null,
+    );
+  }
+
+  void _saveTitle() {
+    if (_titleController.text.isNotEmpty) {
+      _mockDataService.updateTask(
+        widget.task.taskListId,
+        widget.task.id,
+        title: _titleController.text,
+      );
+      setState(() => _isEditing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,23 +85,63 @@ class TaskCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    task.title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                  child: _isEditing
+                      ? TextField(
+                          controller: _titleController,
+                          autofocus: true,
+                          onSubmitted: (_) => _saveTitle(),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                        )
+                      : GestureDetector(
+                          onDoubleTap: () {
+                            if (widget.category != TaskListCategory.template) {
+                              setState(() => _isEditing = true);
+                            }
+                          },
+                          child: Text(
+                            widget.task.title,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  decoration: widget.task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                          ),
                         ),
-                  ),
                 ),
-                if (category != TaskListCategory.template) ...[
+                if (_isEditing) ...[
                   IconButton(
-                    icon: Icon(
-                      task.isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                      color: task.isCompleted ? Colors.green : Colors.grey,
-                    ),
-                    onPressed: onComplete,
+                    icon: const Icon(Icons.check),
+                    onPressed: _saveTitle,
                   ),
-                ] else if (task.isCompleted) ...[
-                  const Icon(Icons.check_circle, color: Colors.green),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _isEditing = false),
+                  ),
+                ] else ...[
+                  if (widget.category != TaskListCategory.template) ...[
+                    IconButton(
+                      icon: Icon(
+                        widget.task.isCompleted
+                            ? Icons.check_circle
+                            : Icons.circle_outlined,
+                        color: widget.task.isCompleted ? Colors.green : Colors.grey,
+                      ),
+                      onPressed: widget.onComplete,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: _selectDueDate,
+                    ),
+                    if (widget.task.dueDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: _clearDueDate,
+                      ),
+                  ] else if (widget.task.isCompleted) ...[
+                    const Icon(Icons.check_circle, color: Colors.green),
+                  ],
                 ],
               ],
             ),
