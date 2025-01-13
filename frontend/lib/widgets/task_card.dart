@@ -140,6 +140,34 @@ class _TaskCardState extends State<TaskCard> {
                         icon: const Icon(Icons.clear),
                         onPressed: _clearDueDate,
                       ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Task'),
+                            content: const Text('Are you sure you want to delete this task?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('CANCEL'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _mockDataService.deleteTask(
+                                    widget.task.taskListId,
+                                    widget.task.id,
+                                  );
+                                },
+                                child: const Text('DELETE'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ] else if (widget.task.isCompleted) ...[
                     const Icon(Icons.check_circle, color: Colors.green),
                   ],

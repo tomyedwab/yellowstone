@@ -118,6 +118,26 @@ class MockDataService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void deleteTask(int taskListId, int taskId) {
+    final taskListIndex = _taskLists.indexWhere((list) => list.id == taskListId);
+    if (taskListIndex == -1) throw Exception('TaskList not found');
+
+    final updatedTasks = List<Task>.from(_taskLists[taskListIndex].tasks);
+    final taskIndex = updatedTasks.indexWhere((task) => task.id == taskId);
+    if (taskIndex == -1) throw Exception('Task not found');
+
+    updatedTasks.removeAt(taskIndex);
+
+    _taskLists[taskListIndex] = TaskList(
+      id: _taskLists[taskListIndex].id,
+      title: _taskLists[taskListIndex].title,
+      category: _taskLists[taskListIndex].category,
+      tasks: updatedTasks,
+    );
+    
+    notifyListeners();
+  }
+
   void markTaskComplete(int taskListId, int taskId, bool complete) {
     final taskListIndex = _taskLists.indexWhere((list) => list.id == taskListId);
     if (taskListIndex == -1) throw Exception('TaskList not found');
