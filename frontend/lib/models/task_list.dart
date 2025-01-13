@@ -1,3 +1,5 @@
+import 'task.dart';
+
 enum TaskListCategory {
   template,
   toDoList,

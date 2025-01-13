@@ -156,7 +156,7 @@ class _TaskCardState extends State<TaskCard> {
             if (widget.task.dueDate != null) ...[
               const SizedBox(height: 8.0),
               Text(
-                'Due: ${widget._dateFormat.format(widget.task.dueDate!)}',
+                'Due: ${TaskCard._dateFormat.format(widget.task.dueDate!)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -171,7 +171,7 @@ class _TaskCardState extends State<TaskCard> {
             if (widget.task.completedAt != null) ...[
               const SizedBox(height: 8.0),
               Text(
-                'Completed: ${_dateFormat.format(widget.task.completedAt!)}',
+                'Completed: ${TaskCard._dateFormat.format(widget.task.completedAt!)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
