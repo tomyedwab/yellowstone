@@ -15,10 +15,6 @@ class MockDataService extends ChangeNotifier {
   }
   final List<TaskList> _taskLists = [];
   
-  MockDataService() {
-    _initializeData();
-  }
-
   void _initializeData() {
     _taskLists.addAll([
       TaskList(

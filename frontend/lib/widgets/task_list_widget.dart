@@ -51,7 +51,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
               ),
               Chip(
                 label: Text(
-                  taskList.category.name,
+                  widget.taskList.category.name,
                   style: const TextStyle(color: Colors.white),
                 ),
                 backgroundColor: widget.taskList.category == TaskListCategory.template
