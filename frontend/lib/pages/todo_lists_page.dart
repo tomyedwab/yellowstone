@@ -48,45 +48,46 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
               onReorder: (oldIndex, newIndex) {
                 _mockDataService.reorderTaskLists(oldIndex, newIndex);
               },
-        itemBuilder: (context, index) {
-          final taskList = taskLists[index];
-          return Card(
-            key: ValueKey(taskList.id),
-            margin: const EdgeInsets.all(8.0),
-            child: ListTile(
-              title: Text(taskList.title),
-              subtitle: Text('${taskList.taskIds.length} tasks'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Chip(
-                    label: Text(
-                      taskList.category.name,
-                      style: const TextStyle(color: Colors.white),
+              itemBuilder: (context, index) {
+                final taskList = taskLists[index];
+                return Card(
+                  key: ValueKey(taskList.id),
+                  margin: const EdgeInsets.all(8.0),
+                  child: ListTile(
+                    title: Text(taskList.title),
+                    subtitle: Text('${taskList.taskIds.length} tasks'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Chip(
+                          label: Text(
+                            taskList.category.name,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: taskList.category == TaskListCategory.template
+                              ? Colors.blue
+                              : Colors.green,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.archive),
+                          onPressed: () {
+                            _mockDataService.archiveTaskList(taskList.id);
+                          },
+                        ),
+                      ],
                     ),
-                    backgroundColor: taskList.category == TaskListCategory.template
-                        ? Colors.blue
-                        : Colors.green,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.archive),
-                    onPressed: () {
-                      _mockDataService.archiveTaskList(taskList.id);
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TaskListView(taskListId: taskList.id),
+                        ),
+                      );
                     },
-                  ),
-                ],
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TaskListView(taskListId: taskList.id),
                   ),
                 );
               },
             ),
-          );
-            },
           ),
           Card(
             margin: const EdgeInsets.all(8.0),
