@@ -1,8 +1,18 @@
+import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 import 'package:intl/intl.dart';
 
-class MockDataService {
+class MockDataService extends ChangeNotifier {
+  static final MockDataService _instance = MockDataService._internal();
+  
+  factory MockDataService() {
+    return _instance;
+  }
+  
+  MockDataService._internal() {
+    _initializeData();
+  }
   final List<TaskList> _taskLists = [];
   
   MockDataService() {
@@ -97,5 +107,7 @@ class MockDataService {
       category: _taskLists[taskListIndex].category,
       tasks: updatedTasks,
     );
+    
+    notifyListeners();
   }
 }

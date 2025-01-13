@@ -23,13 +23,35 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final MockDataService _mockDataService = MockDataService();
+
+  @override
+  void initState() {
+    super.initState();
+    _mockDataService.addListener(_onDataChanged);
+  }
+
+  @override
+  void dispose() {
+    _mockDataService.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final mockDataService = MockDataService();
-    final taskLists = mockDataService.getTaskLists();
+    final taskLists = _mockDataService.getTaskLists();
 
     return Scaffold(
       appBar: AppBar(
