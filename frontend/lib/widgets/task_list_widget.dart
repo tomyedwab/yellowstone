@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task_list.dart';
 import '../services/mock_data_service.dart';
 import 'task_card.dart';
+import 'new_task_card.dart';
 
 class TaskListWidget extends StatefulWidget {
   final int taskListId;
@@ -69,24 +70,30 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             child: Text('No tasks in this list'),
           )
         else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: taskList.tasks.length,
-            itemBuilder: (context, index) {
-              return TaskCard(
-                task: taskList.tasks[index],
-                category: taskList.category,
-                onComplete: () {
-                  final task = taskList.tasks[index];
-                  _mockDataService.markTaskComplete(
-                    task.taskListId,
-                    task.id,
-                    !task.isCompleted,
+          Column(
+            children: [
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: taskList.tasks.length,
+                itemBuilder: (context, index) {
+                  return TaskCard(
+                    task: taskList.tasks[index],
+                    category: taskList.category,
+                    onComplete: () {
+                      final task = taskList.tasks[index];
+                      _mockDataService.markTaskComplete(
+                        task.taskListId,
+                        task.id,
+                        !task.isCompleted,
+                      );
+                    },
                   );
                 },
-              );
-            },
+              ),
+              if (taskList.category != TaskListCategory.template)
+                NewTaskCard(taskListId: taskList.id),
+            ],
           ),
       ],
     );
