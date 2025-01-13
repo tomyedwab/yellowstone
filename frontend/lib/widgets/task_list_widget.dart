@@ -76,9 +76,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 onReorder: (oldIndex, newIndex) {
-                  if (taskList.category != TaskListCategory.template) {
-                    _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
-                  }
+                  _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
                 },
                 children: [
                   for (int index = 0; index < taskList.tasks.length; index++)
