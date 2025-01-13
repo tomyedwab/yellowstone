@@ -64,7 +64,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             ],
           ),
         ),
-        if (taskList.tasks.isEmpty)
+        if (taskList.taskIds.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text('No tasks in this list'),
