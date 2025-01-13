@@ -43,11 +43,27 @@ class _TemplatesPageState extends State<TemplatesPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
+            child: ReorderableListView.builder(
               itemCount: templates.length,
+              onReorder: (oldIndex, newIndex) {
+                final templates = _mockDataService.getTaskLists()
+                    .where((list) => list.category == TaskListCategory.template)
+                    .toList();
+                final movedList = templates[oldIndex];
+                
+                // If newIndex is 0, place at start
+                if (newIndex == 0) {
+                  _mockDataService.reorderTaskLists(movedList.id, null);
+                } else {
+                  // Otherwise place after the item that's now at newIndex-1
+                  final afterList = templates[newIndex - 1];
+                  _mockDataService.reorderTaskLists(movedList.id, afterList.id);
+                }
+              },
               itemBuilder: (context, index) {
           final template = templates[index];
           return Card(
+            key: ValueKey(template.id),
             margin: const EdgeInsets.all(8.0),
             child: ListTile(
               title: Text(template.title),
