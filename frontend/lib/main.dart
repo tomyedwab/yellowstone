@@ -58,7 +58,7 @@ class _RootPageState extends State<RootPage> {
             label: 'Lists',
           ),
           NavigationDestination(
-            icon: Icon(Icons.template_frame),
+            icon: Icon(Icons.copy_all),
             label: 'Templates',
           ),
           NavigationDestination(
