@@ -113,8 +113,25 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createTaskList(String title, TaskListCategory category) {
-    // TODO: Implement REST call
+  Future<void> createTaskList(String title, TaskListCategory category) async {
+    final clientId = _generateClientId();
+    final event = {
+      'type': 'yellowstone:AddTaskList',
+      'title': title,
+      'category': category.name.toLowerCase(),
+      'archived': false,
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to create task list: ${response.body}');
+    }
+    
     notifyListeners();
   }
 
