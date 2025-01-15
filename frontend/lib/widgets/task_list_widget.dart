@@ -71,7 +71,13 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final taskList = await _restDataService.getTaskListById(widget.taskListId);
+    return FutureBuilder<TaskList>(
+      future: _restDataService.getTaskListById(widget.taskListId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final taskList = snapshot.data!;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
