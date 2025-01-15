@@ -112,6 +112,10 @@ const getArchivedTaskListsV1Sql = `
 SELECT id, title, category, archived FROM task_list_v1 WHERE archived = true;
 `
 
+const getTaskListByIdV1Sql = `
+SELECT id, title, category, archived FROM task_list_v1 WHERE id = $1;
+`
+
 type TaskListV1 struct {
 	Id       int
 	Title    string
@@ -147,7 +151,29 @@ func taskListDBArchived(db *sqlx.DB) (TaskListV1Response, error) {
 	return TaskListV1Response{TaskLists: taskLists}, err
 }
 
+func taskListDBById(db *sqlx.DB, id int) (TaskListV1, error) {
+	var taskList TaskListV1
+	err := db.Get(&taskList, getTaskListByIdV1Sql, id)
+	return taskList, err
+}
+
 func InitTaskListHandlers(db *database.Database) {
+	http.HandleFunc("/tasklist/get", func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.URL.Query().Get("id")
+		if idStr == "" {
+			http.Error(w, "Missing id parameter", http.StatusBadRequest)
+			return
+		}
+		
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+			return
+		}
+
+		resp, err := taskListDBById(db.GetDB(), id)
+		database.HandleAPIResponse(w, resp, err)
+	})
 	http.HandleFunc("/tasklist/all", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := taskListDBAll(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
