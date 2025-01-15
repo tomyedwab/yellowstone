@@ -17,12 +17,21 @@ func EventMapper(message *json.RawMessage, generic *events.GenericEvent) (events
 		}
 		return &event, nil
 
-	case "yellowstone:updateTaskList":
-		var event UpdateTaskListEvent
+	case "yellowstone:updateTaskListTitle":
+		var event UpdateTaskListTitleEvent
 		err := json.Unmarshal(*message, &event)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing yellowstone:updateTaskList %d: %w", generic.Id, err)
+			return nil, fmt.Errorf("error parsing yellowstone:updateTaskListTitle %d: %w", generic.Id, err)
 		}
+		return &event, nil
+
+	case "yellowstone:updateTaskListArchived":
+		var event UpdateTaskListArchivedEvent
+		err := json.Unmarshal(*message, &event)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing yellowstone:updateTaskListArchived %d: %w", generic.Id, err)
+		}
+		fmt.Printf("EventMapper: yellowstone:updateTaskListArchived %d %v\n", event.ListId, event.Archived) // donotcheckin
 		return &event, nil
 
 	default:

@@ -105,14 +105,9 @@ class RestDataService extends ChangeNotifier {
 
   Future<void> archiveTaskList(int taskListId) async {
     final clientId = _generateClientId();
-    // Get existing task list
-    final taskList = getTaskListById(taskListId);
-    
     final event = {
-      'type': 'yellowstone:updateTaskList',
-      'list_id': taskListId,
-      'title': taskList.title,
-      'category': taskList.category.name.toLowerCase(),
+      'type': 'yellowstone:updateTaskListArchived',
+      'listId': taskListId,
       'archived': true,
     };
     
@@ -131,14 +126,9 @@ class RestDataService extends ChangeNotifier {
 
   Future<void> unarchiveTaskList(int taskListId) async {
     final clientId = _generateClientId();
-    // Get existing task list
-    final taskList = getTaskListById(taskListId);
-    
     final event = {
-      'type': 'yellowstone:updateTaskList',
-      'list_id': taskListId,
-      'title': taskList.title,
-      'category': taskList.category.name.toLowerCase(),
+      'type': 'yellowstone:updateTaskListArchived',
+      'listId': taskListId,
       'archived': false,
     };
     
@@ -177,19 +167,12 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateTaskList(int taskListId, {String? title}) async {
+  Future<void> updateTaskListTitle(int taskListId, String title) async {
     final clientId = _generateClientId();
-    // Get existing task list
-    final taskList = getTaskListById(taskListId);
-    final category = taskList.category;
-    final archived = taskList.archived;
-
     final event = {
-      'type': 'yellowstone:updateTaskList',
-      'list_id': taskListId,
+      'type': 'yellowstone:updateTaskListTitle',
+      'listId': taskListId,
       'title': title,
-      'category': category.name.toLowerCase(),
-      'archived': archived,
     };
     
     final response = await http.post(

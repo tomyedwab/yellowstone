@@ -31,13 +31,18 @@ type AddTaskListEvent struct {
 	Archived bool
 }
 
-type UpdateTaskListEvent struct {
+type UpdateTaskListTitleEvent struct {
 	events.GenericEvent
 
-	ListId   int `db:"list_id"`
-	Title    string
-	Category string
-	Archived bool
+	ListId int    `db:"list_id"`
+	Title  string `db:"title"`
+}
+
+type UpdateTaskListArchivedEvent struct {
+	events.GenericEvent
+
+	ListId   int  `db:"list_id"`
+	Archived bool `db:"archived"`
 }
 
 // Event handler
@@ -47,9 +52,15 @@ INSERT INTO task_list_v1 (title, category, archived)
 VALUES (:title, :category, :archived);
 `
 
-const updateTaskListV1Sql = `
+const updateTaskListTitleV1Sql = `
 UPDATE task_list_v1
-SET title = :title, category = :category, archived = :archived
+SET title = :title
+WHERE id = :list_id;
+`
+
+const updateTaskListArchivedV1Sql = `
+UPDATE task_list_v1
+SET archived = :archived
 WHERE id = :list_id;
 `
 
@@ -68,10 +79,18 @@ func TaskListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 		)
 		return true, err
 
-	case *UpdateTaskListEvent:
-		fmt.Printf("TaskList v1: UpdateTaskListEvent %d %d %v %v %v\n", evt.Id, evt.ListId, evt.Title, evt.Category, evt.Archived)
+	case *UpdateTaskListTitleEvent:
+		fmt.Printf("TaskList v1: UpdateTaskListTitleEvent %d %d %v\n", evt.Id, evt.ListId, evt.Title)
 		_, err := tx.NamedExec(
-			updateTaskListV1Sql,
+			updateTaskListTitleV1Sql,
+			*evt,
+		)
+		return true, err
+
+	case *UpdateTaskListArchivedEvent:
+		fmt.Printf("TaskList v1: UpdateTaskListArchivedEvent %d %d %v\n", evt.Id, evt.ListId, evt.Archived)
+		_, err := tx.NamedExec(
+			updateTaskListArchivedV1Sql,
 			*evt,
 		)
 		return true, err
