@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/task.dart';
@@ -13,7 +14,15 @@ class RestDataService extends ChangeNotifier {
     return _instance;
   }
   
-  RestDataService._internal();
+  RestDataService._internal() {
+    _random = Random();
+  }
+  
+  late final Random _random;
+  
+  String _generateClientId() {
+    return List.generate(16, (_) => _random.nextInt(16).toRadixString(16)).join();
+  }
 
   // Mock implementations for now
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
@@ -109,8 +118,24 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateTaskList(int taskListId, {String? title}) {
-    // TODO: Implement REST call
+  Future<void> updateTaskList(int taskListId, {String? title}) async {
+    final clientId = _generateClientId();
+    final event = {
+      'type': 'UpdateTaskListEvent',
+      'ListId': taskListId,
+      'Title': title,
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update task list: ${response.body}');
+    }
+    
     notifyListeners();
   }
 }
