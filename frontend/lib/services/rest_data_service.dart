@@ -103,13 +103,55 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void archiveTaskList(int taskListId) {
-    // TODO: Implement REST call
+  Future<void> archiveTaskList(int taskListId) async {
+    final clientId = _generateClientId();
+    // Get existing task list
+    final taskList = getTaskListById(taskListId);
+    
+    final event = {
+      'type': 'yellowstone:updateTaskList',
+      'list_id': taskListId,
+      'title': taskList.title,
+      'category': taskList.category.name.toLowerCase(),
+      'archived': true,
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to archive task list: ${response.body}');
+    }
+    
     notifyListeners();
   }
 
-  void unarchiveTaskList(int taskListId) {
-    // TODO: Implement REST call
+  Future<void> unarchiveTaskList(int taskListId) async {
+    final clientId = _generateClientId();
+    // Get existing task list
+    final taskList = getTaskListById(taskListId);
+    
+    final event = {
+      'type': 'yellowstone:updateTaskList',
+      'list_id': taskListId,
+      'title': taskList.title,
+      'category': taskList.category.name.toLowerCase(),
+      'archived': false,
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to unarchive task list: ${response.body}');
+    }
+    
     notifyListeners();
   }
 
