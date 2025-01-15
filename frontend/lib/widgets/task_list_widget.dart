@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task_list.dart';
+import '../models/task.dart';
 import '../services/rest_data_service.dart';
 import 'task_card.dart';
 import 'new_task_card.dart';
@@ -62,7 +63,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     if (_titleController.text.isNotEmpty) {
       _restDataService.updateTaskListTitle(
         widget.taskListId,
-        title: _titleController.text,
+        _titleController.text,
       );
       setState(() => _isEditing = false);
     }
