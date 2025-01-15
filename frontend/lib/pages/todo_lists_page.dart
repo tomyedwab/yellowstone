@@ -35,7 +35,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
     try {
       final lists = await _restDataService.getTaskLists();
       setState(() {
-        _taskLists = lists.where((list) => list.category == TaskListCategory.toDoList).toList();
+        _taskLists = lists.where((list) => list.category == TaskListCategory.toDoList && !list.archived).toList();
       });
     } catch (e) {
       // TODO: Handle error

@@ -116,7 +116,7 @@ class RestDataService extends ChangeNotifier {
   Future<void> createTaskList(String title, TaskListCategory category) async {
     final clientId = _generateClientId();
     final event = {
-      'type': 'yellowstone:AddTaskList',
+      'type': 'yellowstone:addTaskList',
       'title': title,
       'category': category.name.toLowerCase(),
       'archived': false,
@@ -137,6 +137,11 @@ class RestDataService extends ChangeNotifier {
 
   Future<void> updateTaskList(int taskListId, {String? title}) async {
     final clientId = _generateClientId();
+    // Get existing task list
+    final taskList = getTaskListById(taskListId);
+    final category = taskList.category;
+    final archived = taskList.archived;
+
     final event = {
       'type': 'yellowstone:updateTaskList',
       'list_id': taskListId,

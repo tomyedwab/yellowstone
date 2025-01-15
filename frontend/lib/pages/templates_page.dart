@@ -35,7 +35,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
     try {
       final lists = await _restDataService.getTaskLists();
       setState(() {
-        _taskLists = lists.where((list) => list.category == TaskListCategory.template).toList();
+        _taskLists = lists.where((list) => list.category == TaskListCategory.template && !list.archived).toList();
       });
     } catch (e) {
       // TODO: Handle error

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/rest_data_service.dart';
 import '../widgets/task_list_widget.dart';
+import '../models/task_list.dart';
 
 class TaskListView extends StatefulWidget {
   final int taskListId;
