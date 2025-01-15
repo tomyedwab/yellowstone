@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/task.dart';
 import '../models/task_list.dart';
+
+const String baseUrl = 'http://localhost:8334';
 
 class RestDataService extends ChangeNotifier {
   static final RestDataService _instance = RestDataService._internal();
@@ -12,9 +16,33 @@ class RestDataService extends ChangeNotifier {
   RestDataService._internal();
 
   // Mock implementations for now
-  List<TaskList> getTaskLists({bool includeArchived = false}) {
-    // TODO: Implement REST call
-    return [];
+  Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
+    final response = await http.get(Uri.parse('$baseUrl/tasklist/all'));
+    
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      final List<dynamic> taskLists = data['TaskLists'];
+      
+      return taskLists.map((json) => TaskList(
+        id: json['Id'],
+        title: json['Title'],
+        category: _categoryFromString(json['Category']),
+        archived: json['Archived'],
+      )).toList();
+    } else {
+      throw Exception('Failed to load task lists');
+    }
+  }
+
+  TaskListCategory _categoryFromString(String category) {
+    switch (category.toLowerCase()) {
+      case 'todolist':
+        return TaskListCategory.toDoList;
+      case 'template':
+        return TaskListCategory.template;
+      default:
+        throw Exception('Unknown category: $category');
+    }
   }
 
   TaskList getTaskListById(int taskListId) {
