@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task_list.dart';
-import '../services/mock_data_service.dart';
+import '../services/rest_data_service.dart';
 import 'task_card.dart';
 import 'new_task_card.dart';
 
@@ -17,26 +17,40 @@ class TaskListWidget extends StatefulWidget {
 }
 
 class _TaskListWidgetState extends State<TaskListWidget> {
-  final MockDataService _mockDataService = MockDataService();
+  final RestDataService _restDataService = RestDataService();
+  List<Task> _tasks = [];
   bool _isEditing = false;
   late TextEditingController _titleController;
 
   @override
   void initState() {
     super.initState();
-    _mockDataService.addListener(_onDataChanged);
+    _restDataService.addListener(_onDataChanged);
+    _loadTasks();
     _titleController = TextEditingController();
   }
 
   @override
   void dispose() {
-    _mockDataService.removeListener(_onDataChanged);
+    _restDataService.removeListener(_onDataChanged);
     _titleController.dispose();
     super.dispose();
   }
 
   void _onDataChanged() {
-    setState(() {});
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    try {
+      final tasks = await _restDataService.getTasksForList(widget.taskListId);
+      setState(() {
+        _tasks = tasks;
+      });
+    } catch (e) {
+      // TODO: Handle error
+      print('Error loading tasks: $e');
+    }
   }
 
   void _startEditing(String currentTitle) {
@@ -46,7 +60,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   void _saveTitle() {
     if (_titleController.text.isNotEmpty) {
-      _mockDataService.updateTaskList(
+      _restDataService.updateTaskListTitle(
         widget.taskListId,
         title: _titleController.text,
       );
@@ -56,7 +70,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final taskList = _mockDataService.getTaskListById(widget.taskListId);
+    final taskList = await _restDataService.getTaskListById(widget.taskListId);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,18 +126,18 @@ class _TaskListWidgetState extends State<TaskListWidget> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               onReorder: (oldIndex, newIndex) {
-                _mockDataService.reorderTasks(taskList.id, oldIndex, newIndex);
+                _restDataService.reorderTasks(taskList.id, oldIndex, newIndex);
               },
               children: [
                 for (int index = 0; index < taskList.taskIds.length; index++)
                   KeyedSubtree(
                     key: ValueKey(taskList.taskIds[index]),
                     child: TaskCard(
-                      task: _mockDataService.getTaskById(taskList.taskIds[index]),
+                      task: _tasks[index],
                       category: taskList.category,
                       onComplete: () {
-                        final task = _mockDataService.getTaskById(taskList.taskIds[index]);
-                        _mockDataService.markTaskComplete(
+                        final task = _tasks[index];
+                        _restDataService.markTaskComplete(
                           task.id,
                           !task.isCompleted,
                         );
