@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/mock_data_service.dart';
+import '../services/rest_data_service.dart';
 import '../models/task_list.dart';
 import 'task_list_view.dart';
 
@@ -11,29 +11,41 @@ class TemplatesPage extends StatefulWidget {
 }
 
 class _TemplatesPageState extends State<TemplatesPage> {
-  final MockDataService _mockDataService = MockDataService();
+  final RestDataService _restDataService = RestDataService();
+  List<TaskList> _taskLists = [];
 
   @override
   void initState() {
     super.initState();
-    _mockDataService.addListener(_onDataChanged);
+    _restDataService.addListener(_onDataChanged);
+    _loadTaskLists();
   }
 
   @override
   void dispose() {
-    _mockDataService.removeListener(_onDataChanged);
+    _restDataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
   void _onDataChanged() {
-    setState(() {});
+    _loadTaskLists();
+  }
+
+  Future<void> _loadTaskLists() async {
+    try {
+      final lists = await _restDataService.getTaskLists();
+      setState(() {
+        _taskLists = lists.where((list) => list.category == TaskListCategory.template).toList();
+      });
+    } catch (e) {
+      // TODO: Handle error
+      print('Error loading task lists: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final templates = _mockDataService.getTaskLists()
-        .where((list) => list.category == TaskListCategory.template)
-        .toList();
+    final templates = _taskLists;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,18 +58,15 @@ class _TemplatesPageState extends State<TemplatesPage> {
             child: ReorderableListView.builder(
               itemCount: templates.length,
               onReorder: (oldIndex, newIndex) {
-                final templates = _mockDataService.getTaskLists()
-                    .where((list) => list.category == TaskListCategory.template)
-                    .toList();
-                final movedList = templates[oldIndex];
+                final movedList = _taskLists[oldIndex];
                 
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
-                  _mockDataService.reorderTaskLists(movedList.id, null);
+                  _restDataService.reorderTaskLists(movedList.id, null);
                 } else {
                   // Otherwise place after the item that's now at newIndex-1
-                  final afterList = templates[newIndex - 1];
-                  _mockDataService.reorderTaskLists(movedList.id, afterList.id);
+                  final afterList = _taskLists[newIndex - 1];
+                  _restDataService.reorderTaskLists(movedList.id, afterList.id);
                 }
               },
               itemBuilder: (context, index) {
@@ -105,7 +114,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
                       ),
                       onSubmitted: (value) {
                         if (value.isNotEmpty) {
-                          _mockDataService.createTaskList(
+                          _restDataService.createTaskList(
                             value,
                             TaskListCategory.template,
                           );

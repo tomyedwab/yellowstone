@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/mock_data_service.dart';
+import '../services/rest_data_service.dart';
 import '../widgets/task_list_widget.dart';
 
 class TaskListView extends StatefulWidget {
@@ -15,27 +15,49 @@ class TaskListView extends StatefulWidget {
 }
 
 class _TaskListViewState extends State<TaskListView> {
-  final MockDataService _mockDataService = MockDataService();
+  final RestDataService _restDataService = RestDataService();
+  TaskList? _taskList;
 
   @override
   void initState() {
     super.initState();
-    _mockDataService.addListener(_onDataChanged);
+    _restDataService.addListener(_onDataChanged);
+    _loadTaskList();
   }
 
   @override
   void dispose() {
-    _mockDataService.removeListener(_onDataChanged);
+    _restDataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
   void _onDataChanged() {
-    setState(() {});
+    _loadTaskList();
+  }
+
+  Future<void> _loadTaskList() async {
+    try {
+      final taskList = await _restDataService.getTaskListById(widget.taskListId);
+      setState(() {
+        _taskList = taskList;
+      });
+    } catch (e) {
+      // TODO: Handle error
+      print('Error loading task list: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final taskList = _mockDataService.getTaskListById(widget.taskListId);
+    if (_taskList == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    final taskList = _taskList!;
     
     return Scaffold(
       appBar: AppBar(
