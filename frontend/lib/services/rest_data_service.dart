@@ -121,9 +121,11 @@ class RestDataService extends ChangeNotifier {
   Future<void> updateTaskList(int taskListId, {String? title}) async {
     final clientId = _generateClientId();
     final event = {
-      'type': 'UpdateTaskListEvent',
-      'ListId': taskListId,
-      'Title': title,
+      'type': 'yellowstone:updateTaskList',
+      'list_id': taskListId,
+      'title': title,
+      'category': category.name.toLowerCase(),
+      'archived': archived,
     };
     
     final response = await http.post(
