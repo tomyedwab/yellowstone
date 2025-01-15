@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/mock_data_service.dart';
+import '../services/rest_data_service.dart';
 import '../models/task_list.dart';
 import 'task_list_view.dart';
 
@@ -11,29 +11,41 @@ class ArchivedListsPage extends StatefulWidget {
 }
 
 class _ArchivedListsPageState extends State<ArchivedListsPage> {
-  final MockDataService _mockDataService = MockDataService();
+  final RestDataService _restDataService = RestDataService();
+  List<TaskList> _taskLists = [];
 
   @override
   void initState() {
     super.initState();
-    _mockDataService.addListener(_onDataChanged);
+    _restDataService.addListener(_onDataChanged);
+    _loadTaskLists();
   }
 
   @override
   void dispose() {
-    _mockDataService.removeListener(_onDataChanged);
+    _restDataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
   void _onDataChanged() {
-    setState(() {});
+    _loadTaskLists();
+  }
+
+  Future<void> _loadTaskLists() async {
+    try {
+      final lists = await _restDataService.getTaskLists();
+      setState(() {
+        _taskLists = lists.where((list) => list.archived).toList();
+      });
+    } catch (e) {
+      // TODO: Handle error
+      print('Error loading task lists: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final taskLists = _mockDataService.getTaskLists(includeArchived: true)
-        .where((list) => list.archived)
-        .toList();
+    final taskLists = _taskLists;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +76,7 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
                   IconButton(
                     icon: const Icon(Icons.unarchive),
                     onPressed: () {
-                      _mockDataService.unarchiveTaskList(taskList.id);
+                      _restDataService.unarchiveTaskList(taskList.id);
                     },
                   ),
                 ],
