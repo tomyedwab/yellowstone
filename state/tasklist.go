@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/jmoiron/sqlx"
 
@@ -164,7 +165,7 @@ func InitTaskListHandlers(db *database.Database) {
 			http.Error(w, "Missing id parameter", http.StatusBadRequest)
 			return
 		}
-		
+
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
 			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
