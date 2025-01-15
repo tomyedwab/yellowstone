@@ -79,84 +79,86 @@ class _TaskListWidgetState extends State<TaskListWidget> {
         }
         final taskList = snapshot.data!;
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: _isEditing
-                    ? TextField(
-                        controller: _titleController,
-                        autofocus: true,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                        onSubmitted: (_) => _saveTitle(),
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                        ),
-                      )
-                    : GestureDetector(
-                        onDoubleTap: () => _startEditing(taskList.title),
-                        child: Text(
-                          taskList.title,
-                          style: Theme.of(context).textTheme.headlineSmall,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _isEditing
+                        ? TextField(
+                            controller: _titleController,
+                            autofocus: true,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                            onSubmitted: (_) => _saveTitle(),
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                            ),
+                          )
+                        : GestureDetector(
+                            onDoubleTap: () => _startEditing(taskList.title),
+                            child: Text(
+                              taskList.title,
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                          ),
+                  ),
+                  if (_isEditing) ...[
+                    IconButton(
+                      icon: const Icon(Icons.check),
+                      onPressed: _saveTitle,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() => _isEditing = false),
+                    ),
+                  ] else
+                    Chip(
+                      label: Text(
+                        taskList.category.name,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      backgroundColor: taskList.category == TaskListCategory.template
+                          ? Colors.blue
+                          : Colors.green,
+                    ),
+                ],
+              ),
+            ),
+            Column(
+              children: [
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onReorder: (oldIndex, newIndex) {
+                    _restDataService.reorderTasks(taskList.id, oldIndex, newIndex);
+                  },
+                  children: [
+                    for (int index = 0; index < taskList.taskIds.length; index++)
+                      KeyedSubtree(
+                        key: ValueKey(taskList.taskIds[index]),
+                        child: TaskCard(
+                          task: _tasks[index],
+                          category: taskList.category,
+                          onComplete: () {
+                            final task = _tasks[index];
+                            _restDataService.markTaskComplete(
+                              task.id,
+                              !task.isCompleted,
+                            );
+                          },
                         ),
                       ),
-              ),
-              if (_isEditing) ...[
-                IconButton(
-                  icon: const Icon(Icons.check),
-                  onPressed: _saveTitle,
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _isEditing = false),
-                ),
-              ] else
-                Chip(
-                  label: Text(
-                    taskList.category.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  backgroundColor: taskList.category == TaskListCategory.template
-                      ? Colors.blue
-                      : Colors.green,
-                ),
-            ],
-          ),
-        ),
-        Column(
-          children: [
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              onReorder: (oldIndex, newIndex) {
-                _restDataService.reorderTasks(taskList.id, oldIndex, newIndex);
-              },
-              children: [
-                for (int index = 0; index < taskList.taskIds.length; index++)
-                  KeyedSubtree(
-                    key: ValueKey(taskList.taskIds[index]),
-                    child: TaskCard(
-                      task: _tasks[index],
-                      category: taskList.category,
-                      onComplete: () {
-                        final task = _tasks[index];
-                        _restDataService.markTaskComplete(
-                          task.id,
-                          !task.isCompleted,
-                        );
-                      },
-                    ),
-                  ),
+                NewTaskCard(taskListId: taskList.id),
               ],
             ),
-            NewTaskCard(taskListId: taskList.id),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
