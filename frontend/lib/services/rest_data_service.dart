@@ -55,19 +55,31 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<TaskList> getTaskListById(int taskListId) async {
-    final response = await http.get(Uri.parse('$baseUrl/tasklist/get?id=$taskListId'));
+    // Get the task list details
+    final listResponse = await http.get(Uri.parse('$baseUrl/tasklist/get?id=$taskListId'));
     
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> json = jsonDecode(response.body);
-      return TaskList(
-        id: json['Id'],
-        title: json['Title'],
-        category: _categoryFromString(json['Category']),
-        archived: json['Archived'],
-      );
-    } else {
-      throw Exception('Failed to load task list: ${response.body}');
+    if (listResponse.statusCode != 200) {
+      throw Exception('Failed to load task list: ${listResponse.body}');
     }
+
+    // Get the tasks for this list
+    final tasksResponse = await http.get(Uri.parse('$baseUrl/task/list?listId=$taskListId'));
+    
+    if (tasksResponse.statusCode != 200) {
+      throw Exception('Failed to load tasks: ${tasksResponse.body}');
+    }
+
+    final Map<String, dynamic> listJson = jsonDecode(listResponse.body);
+    final Map<String, dynamic> tasksJson = jsonDecode(tasksResponse.body);
+    final List<dynamic> tasks = tasksJson['Tasks'];
+
+    return TaskList(
+      id: listJson['Id'],
+      title: listJson['Title'],
+      category: _categoryFromString(listJson['Category']),
+      archived: listJson['Archived'],
+      taskIds: tasks.map<int>((task) => task['Id'] as int).toList(),
+    );
   }
 
   Task getTaskById(int taskId) {
