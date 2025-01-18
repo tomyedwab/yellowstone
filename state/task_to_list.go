@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS task_to_list_v1 (
     task_id INTEGER NOT NULL,
     list_id INTEGER NOT NULL,
     position INTEGER NOT NULL,
-    PRIMARY KEY (task_id),
+    PRIMARY KEY (task_id, list_id),
     FOREIGN KEY (task_id) REFERENCES task_v1(id),
     FOREIGN KEY (list_id) REFERENCES task_list_v1(id)
 );
