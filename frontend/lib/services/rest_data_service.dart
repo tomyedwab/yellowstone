@@ -130,12 +130,45 @@ class RestDataService extends ChangeNotifier {
     }
   }
 
-  void updateTask(int taskListId, int taskId, {
-    String? title,
-    DateTime? dueDate,
-    bool? isCompleted,
-  }) {
-    // TODO: Implement REST call
+  Future<void> updateTaskTitle(int taskId, String title) async {
+    final clientId = _generateClientId();
+    final event = {
+      'type': 'yellowstone:updateTaskTitle',
+      'taskId': taskId,
+      'title': title,
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update task title: ${response.body}');
+    }
+    
+    notifyListeners();
+  }
+
+  Future<void> updateTaskDueDate(int taskId, DateTime? dueDate) async {
+    final clientId = _generateClientId();
+    final event = {
+      'type': 'yellowstone:updateTaskDueDate',
+      'taskId': taskId,
+      'dueDate': dueDate?.toIso8601String(),
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update task due date: ${response.body}');
+    }
+    
     notifyListeners();
   }
 
