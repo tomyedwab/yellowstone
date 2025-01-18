@@ -19,6 +19,7 @@ class RestDataService extends ChangeNotifier {
   }
   
   late final Random _random;
+  final Map<int, Task> _tasks = {};
   
   String _generateClientId() {
     return List.generate(16, (_) => _random.nextInt(16).toRadixString(16)).join();
@@ -71,20 +72,36 @@ class RestDataService extends ChangeNotifier {
 
     final Map<String, dynamic> listJson = jsonDecode(listResponse.body);
     final Map<String, dynamic> tasksJson = jsonDecode(tasksResponse.body);
-    final List<dynamic> tasks = tasksJson['Tasks'];
+    final List<dynamic> tasksData = tasksJson['Tasks'];
+
+    // Convert task JSON data to Task objects and store them
+    for (var taskData in tasksData) {
+      final task = Task(
+        id: taskData['Id'],
+        title: taskData['Title'],
+        taskListId: taskListId,
+        dueDate: taskData['DueDate'] != null ? DateTime.parse(taskData['DueDate']) : null,
+        isCompleted: taskData['CompletedAt'] != null,
+        completedAt: taskData['CompletedAt'] != null ? DateTime.parse(taskData['CompletedAt']) : null,
+      );
+      _tasks[task.id] = task;
+    }
 
     return TaskList(
       id: listJson['Id'],
       title: listJson['Title'],
       category: _categoryFromString(listJson['Category']),
       archived: listJson['Archived'],
-      taskIds: tasks.map<int>((task) => task['Id'] as int).toList(),
+      taskIds: tasksData.map<int>((task) => task['Id'] as int).toList(),
     );
   }
 
   Task getTaskById(int taskId) {
-    // TODO: Implement REST call
-    throw Exception('Not implemented');
+    final task = _tasks[taskId];
+    if (task == null) {
+      throw Exception('Task not found');
+    }
+    return task;
   }
 
   List<Task> getTasksForList(int taskListId) {
