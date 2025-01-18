@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
-import '../services/mock_data_service.dart';
+import '../services/rest_data_service.dart';
 
 class TaskCard extends StatefulWidget {
   final Task task;
@@ -22,7 +22,7 @@ class TaskCard extends StatefulWidget {
 }
 
 class _TaskCardState extends State<TaskCard> {
-  final MockDataService _mockDataService = MockDataService();
+  final RestDataService _restDataService = RestDataService();
   bool _isEditing = false;
   late TextEditingController _titleController;
 
@@ -47,29 +47,17 @@ class _TaskCardState extends State<TaskCard> {
     );
     
     if (date != null) {
-      _mockDataService.updateTask(
-        widget.task.taskListId,
-        widget.task.id,
-        dueDate: date,
-      );
+      _restDataService.updateTaskDueDate(widget.task.id, date);
     }
   }
 
   void _clearDueDate() {
-    _mockDataService.updateTask(
-      widget.task.taskListId,
-      widget.task.id,
-      dueDate: null,
-    );
+    _restDataService.updateTaskDueDate(widget.task.id, null);
   }
 
   void _saveTitle() {
     if (_titleController.text.isNotEmpty) {
-      _mockDataService.updateTask(
-        widget.task.taskListId,
-        widget.task.id,
-        title: _titleController.text,
-      );
+      _restDataService.updateTaskTitle(widget.task.id, _titleController.text);
       setState(() => _isEditing = false);
     }
   }
@@ -156,7 +144,7 @@ class _TaskCardState extends State<TaskCard> {
                               TextButton(
                                 onPressed: () {
                                   Navigator.pop(context);
-                                  _mockDataService.deleteTask(
+                                  _restDataService.deleteTask(
                                     widget.task.taskListId,
                                     widget.task.id,
                                   );
