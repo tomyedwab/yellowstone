@@ -130,7 +130,7 @@ func InitTaskHandlers(db *database.Database) {
 			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
 			return
 		}
-		
+
 		listId, err := strconv.Atoi(listIdStr)
 		if err != nil {
 			http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
@@ -157,23 +157,4 @@ func InitTaskHandlers(db *database.Database) {
 		resp, err := taskDBById(db.GetDB(), id)
 		database.HandleAPIResponse(w, resp, err)
 	})
-
-	/* TODO: Implement this
-	http.HandleFunc("/task/list", func(w http.ResponseWriter, r *http.Request) {
-		taskListIdStr := r.URL.Query().Get("taskListId")
-		if taskListIdStr == "" {
-			http.Error(w, "Missing taskListId parameter", http.StatusBadRequest)
-			return
-		}
-
-		taskListId, err := strconv.Atoi(taskListIdStr)
-		if err != nil {
-			http.Error(w, "Invalid taskListId parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskDBForList(db.GetDB(), taskListId)
-		database.HandleAPIResponse(w, resp, err)
-	})
-	*/
 }
