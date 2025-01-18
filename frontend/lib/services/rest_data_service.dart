@@ -156,7 +156,7 @@ class RestDataService extends ChangeNotifier {
     final event = {
       'type': 'yellowstone:updateTaskDueDate',
       'taskId': taskId,
-      'dueDate': dueDate?.toIso8601String(),
+      'dueDate': dueDate?.toUtc().toIso8601String(),
     };
     
     final response = await http.post(
