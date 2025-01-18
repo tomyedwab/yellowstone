@@ -47,6 +47,13 @@ type UpdateTaskCompletedEvent struct {
 	CompletedAt *time.Time `db:"completed_at"`
 }
 
+type UpdateTaskDueDateEvent struct {
+	events.GenericEvent
+
+	TaskId  int        `db:"task_id"`
+	DueDate *time.Time `db:"due_date"`
+}
+
 // Event handler
 
 const insertTaskV1Sql = `
@@ -63,6 +70,12 @@ WHERE id = :task_id;
 const updateTaskCompletedV1Sql = `
 UPDATE task_v1
 SET completed_at = :completed_at
+WHERE id = :task_id;
+`
+
+const updateTaskDueDateV1Sql = `
+UPDATE task_v1
+SET due_date = :due_date
 WHERE id = :task_id;
 `
 
@@ -110,6 +123,14 @@ func TaskDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 		fmt.Printf("Task v1: UpdateTaskCompletedEvent %d %d %v\n", evt.Id, evt.TaskId, evt.CompletedAt)
 		_, err := tx.NamedExec(
 			updateTaskCompletedV1Sql,
+			*evt,
+		)
+		return true, err
+
+	case *UpdateTaskDueDateEvent:
+		fmt.Printf("Task v1: UpdateTaskDueDateEvent %d %d %v\n", evt.Id, evt.TaskId, evt.DueDate)
+		_, err := tx.NamedExec(
+			updateTaskDueDateV1Sql,
 			*evt,
 		)
 		return true, err
