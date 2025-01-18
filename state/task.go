@@ -28,8 +28,9 @@ CREATE TABLE IF NOT EXISTS task_v1 (
 type AddTaskEvent struct {
 	events.GenericEvent
 
-	Title   string     `db:"title"`
-	DueDate *time.Time `db:"due_date"`
+	Title      string     `db:"title"`
+	DueDate    *time.Time `db:"due_date"`
+	TaskListId int        `db:"task_list_id"`
 }
 
 type UpdateTaskTitleEvent struct {
@@ -73,11 +74,28 @@ func TaskDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 		return true, err
 
 	case *AddTaskEvent:
-		fmt.Printf("Task v1: AddTaskEvent %d %v\n", evt.Id, evt.Title)
-		_, err := tx.NamedExec(
+		fmt.Printf("Task v1: AddTaskEvent %d %v for list %d\n", evt.Id, evt.Title, evt.TaskListId)
+		result, err := tx.NamedExec(
 			insertTaskV1Sql,
 			*evt,
 		)
+		if err != nil {
+			return true, err
+		}
+
+		// Get the ID of the newly inserted task
+		taskId, err := result.LastInsertId()
+		if err != nil {
+			return true, err
+		}
+
+		// Add the task to the list
+		addToList := AddTaskToListEvent{
+			TaskId: int(taskId),
+			ListId: evt.TaskListId,
+		}
+		addToList.Type = "yellowstone:addTaskToList"
+		_, err = tx.NamedExec(insertTaskToListV1Sql, addToList)
 		return true, err
 
 	case *UpdateTaskTitleEvent:
