@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/mock_data_service.dart';
+import '../services/rest_data_service.dart';
 
 class NewTaskCard extends StatefulWidget {
   final int taskListId;
@@ -14,7 +14,7 @@ class NewTaskCard extends StatefulWidget {
 }
 
 class _NewTaskCardState extends State<NewTaskCard> {
-  final MockDataService _mockDataService = MockDataService();
+  final RestDataService _restDataService = RestDataService();
   final TextEditingController _titleController = TextEditingController();
 
   @override
@@ -26,7 +26,7 @@ class _NewTaskCardState extends State<NewTaskCard> {
   void _createTask() {
     final title = _titleController.text.trim();
     if (title.isNotEmpty) {
-      _mockDataService.createTask(widget.taskListId, title);
+      _restDataService.createTask(widget.taskListId, title);
       _titleController.clear();
     }
   }
