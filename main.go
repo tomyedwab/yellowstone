@@ -13,8 +13,9 @@ import (
 
 func main() {
 	db, err := database.Connect("sqlite3", "yellowstone.db", map[string]database.EventUpdateHandler{
-		"task_list_v1": state.TaskListDBHandleEvent,
-		"task_v1":      state.TaskDBHandleEvent,
+		"task_list_v1":    state.TaskListDBHandleEvent,
+		"task_v1":         state.TaskDBHandleEvent,
+		"task_to_list_v1": state.TaskToListDBHandleEvent,
 	})
 	if err != nil {
 		panic(err)

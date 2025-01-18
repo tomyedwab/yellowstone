@@ -124,6 +124,23 @@ func taskDBById(db *sqlx.DB, id int) (TaskV1, error) {
 }
 
 func InitTaskHandlers(db *database.Database) {
+	http.HandleFunc("/task/list", func(w http.ResponseWriter, r *http.Request) {
+		listIdStr := r.URL.Query().Get("listId")
+		if listIdStr == "" {
+			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
+			return
+		}
+		
+		listId, err := strconv.Atoi(listIdStr)
+		if err != nil {
+			http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
+			return
+		}
+
+		resp, err := taskDBForList(db.GetDB(), listId)
+		database.HandleAPIResponse(w, resp, err)
+	})
+
 	http.HandleFunc("/task/get", func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.URL.Query().Get("id")
 		if idStr == "" {
