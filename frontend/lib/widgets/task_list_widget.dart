@@ -129,30 +129,33 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             ),
             Column(
               children: [
-                ReorderableListView(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onReorder: (oldIndex, newIndex) {
-                    _restDataService.reorderTasks(taskList.id, oldIndex, newIndex);
-                  },
-                  children: [
-                    for (int index = 0; index < taskList.taskIds.length; index++)
-                      KeyedSubtree(
-                        key: ValueKey(taskList.taskIds[index]),
-                        child: TaskCard(
-                          task: _tasks[index],
-                          category: taskList.category,
-                          onComplete: () {
-                            final task = _tasks[index];
-                            _restDataService.markTaskComplete(
-                              task.id,
-                              !task.isCompleted,
-                            );
-                          },
+                if (_tasks.isEmpty) 
+                  const Center(child: CircularProgressIndicator())
+                else
+                  ReorderableListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onReorder: (oldIndex, newIndex) {
+                      _restDataService.reorderTasks(taskList.id, oldIndex, newIndex);
+                    },
+                    children: [
+                      for (final taskId in taskList.taskIds)
+                        KeyedSubtree(
+                          key: ValueKey(taskId),
+                          child: TaskCard(
+                            task: _tasks.firstWhere((t) => t.id == taskId),
+                            category: taskList.category,
+                            onComplete: () {
+                              final task = _tasks.firstWhere((t) => t.id == taskId);
+                              _restDataService.markTaskComplete(
+                                task.id,
+                                !task.isCompleted,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                  ],
-                ),
+                    ],
+                  ),
                 NewTaskCard(taskListId: taskList.id),
               ],
             ),

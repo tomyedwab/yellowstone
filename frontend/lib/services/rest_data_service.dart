@@ -104,9 +104,30 @@ class RestDataService extends ChangeNotifier {
     return task;
   }
 
-  List<Task> getTasksForList(int taskListId) {
-    // TODO: Implement REST call
-    return [];
+  Future<List<Task>> getTasksForList(int taskListId) async {
+    final response = await http.get(Uri.parse('$baseUrl/task/list?listId=$taskListId'));
+    
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      final List<dynamic> tasksData = data['Tasks'];
+      
+      final tasks = tasksData.map((taskData) {
+        final task = Task(
+          id: taskData['Id'],
+          title: taskData['Title'],
+          taskListId: taskListId,
+          dueDate: taskData['DueDate'] != null ? DateTime.parse(taskData['DueDate']) : null,
+          isCompleted: taskData['CompletedAt'] != null,
+          completedAt: taskData['CompletedAt'] != null ? DateTime.parse(taskData['CompletedAt']) : null,
+        );
+        _tasks[task.id] = task;
+        return task;
+      }).toList();
+      
+      return tasks;
+    } else {
+      throw Exception('Failed to load tasks: ${response.body}');
+    }
   }
 
   void updateTask(int taskListId, int taskId, {
