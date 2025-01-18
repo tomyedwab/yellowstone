@@ -34,6 +34,30 @@ func EventMapper(message *json.RawMessage, generic *events.GenericEvent) (events
 		fmt.Printf("EventMapper: yellowstone:updateTaskListArchived %d %v\n", event.ListId, event.Archived) // donotcheckin
 		return &event, nil
 
+	case "yellowstone:addTask":
+		var event AddTaskEvent
+		err := json.Unmarshal(*message, &event)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing yellowstone:addTask %d: %w", generic.Id, err)
+		}
+		return &event, nil
+
+	case "yellowstone:updateTaskTitle":
+		var event UpdateTaskTitleEvent
+		err := json.Unmarshal(*message, &event)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing yellowstone:updateTaskTitle %d: %w", generic.Id, err)
+		}
+		return &event, nil
+
+	case "yellowstone:updateTaskCompleted":
+		var event UpdateTaskCompletedEvent
+		err := json.Unmarshal(*message, &event)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing yellowstone:updateTaskCompleted %d: %w", generic.Id, err)
+		}
+		return &event, nil
+
 	default:
 		return generic, nil
 	}
