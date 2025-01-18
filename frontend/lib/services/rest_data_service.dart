@@ -204,8 +204,24 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void markTaskComplete(int taskId, bool complete) {
-    // TODO: Implement REST call
+  Future<void> markTaskComplete(int taskId, bool complete) async {
+    final clientId = _generateClientId();
+    final event = {
+      'type': 'yellowstone:updateTaskCompleted',
+      'taskId': taskId,
+      'completedAt': complete ? DateTime.now().toUtc().toIso8601String() : null,
+    };
+    
+    final response = await http.post(
+      Uri.parse('$baseUrl/publish?cid=$clientId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(event),
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update task completion: ${response.body}');
+    }
+    
     notifyListeners();
   }
 
