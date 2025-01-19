@@ -16,7 +16,8 @@ class RestDataService extends ChangeNotifier {
         return 'http://localhost:8334/api';
       } else {
         // Android emulator needs special localhost address
-        return 'http://10.0.2.2:8334/api';
+        // return 'http://10.0.2.2:8334/api';
+        return 'https://yellowstone.tomyedwab.com/api';
       }
     }
   }
