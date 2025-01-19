@@ -3,10 +3,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   final String loginUrl;
+  final VoidCallback onLoginSuccess;
 
   const LoginPage({
     super.key,
     required this.loginUrl,
+    required this.onLoginSuccess,
   });
 
   @override
@@ -21,6 +23,17 @@ class _LoginPageState extends State<LoginPage> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (String url) async {
+            final cookies = await WebViewCookieJar.cookieJar.loadForRequest(Uri.parse(url));
+            final hasSessionToken = cookies.any((cookie) => cookie.name == 'session-token');
+            if (hasSessionToken) {
+              widget.onLoginSuccess();
+            }
+          },
+        ),
+      )
       ..loadRequest(Uri.parse(widget.loginUrl));
   }
 

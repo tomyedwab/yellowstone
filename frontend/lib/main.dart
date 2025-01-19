@@ -15,7 +15,13 @@ class YellowstoneApp extends StatelessWidget {
       // Navigate to login page when a redirect is received
       navigatorKey.currentState?.push(
         MaterialPageRoute(
-          builder: (context) => LoginPage(loginUrl: url),
+          builder: (context) => LoginPage(
+            loginUrl: url,
+            onLoginSuccess: () {
+              // Pop the login page and return to root
+              navigatorKey.currentState?.pop();
+            },
+          ),
         ),
       );
     });
