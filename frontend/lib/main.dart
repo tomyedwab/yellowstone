@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'pages/todo_lists_page.dart';
 import 'pages/templates_page.dart';
 import 'pages/archived_lists_page.dart';
+import 'services/rest_data_service.dart';
 
 void main() {
   runApp(const YellowstoneApp());
 }
 
 class YellowstoneApp extends StatelessWidget {
-  const YellowstoneApp({super.key});
+  YellowstoneApp({super.key}) {
+    _dataService.setLoginRedirectHandler((url) {
+      // TODO: Implement login redirect
+      print('Login redirect to: $url');
+    });
+  }
+
+  final RestDataService _dataService = RestDataService();
 
   @override
   Widget build(BuildContext context) {
@@ -18,13 +26,18 @@ class YellowstoneApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const RootPage(),
+      home: RootPage(dataService: _dataService),
     );
   }
 }
 
 class RootPage extends StatefulWidget {
-  const RootPage({super.key});
+  final RestDataService dataService;
+
+  const RootPage({
+    super.key,
+    required this.dataService,
+  });
 
   @override
   State<RootPage> createState() => _RootPageState();
@@ -33,10 +46,10 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _pages = [
-    ToDoListsPage(),
-    TemplatesPage(),
-    ArchivedListsPage(),
+  late final List<Widget> _pages = [
+    ToDoListsPage(dataService: widget.dataService),
+    TemplatesPage(dataService: widget.dataService),
+    ArchivedListsPage(dataService: widget.dataService),
   ];
 
   @override
