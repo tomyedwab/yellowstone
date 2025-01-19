@@ -54,11 +54,11 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 	}
 	eventState := events.NewEventState(initialEventId)
 
-	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "ok")
 	})
 
-	http.HandleFunc("/publish", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/publish", func(w http.ResponseWriter, r *http.Request) {
 		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
@@ -100,7 +100,7 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 		HandleAPIResponse(w, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
 	})
 
-	http.HandleFunc("/poll", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/poll", func(w http.ResponseWriter, r *http.Request) {
 		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}

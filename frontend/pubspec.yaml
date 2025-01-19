@@ -1,5 +1,5 @@
-name: frontend
-description: A simple Flutter application displaying items as cards
+name: Yellowstone
+description: A task management app
 publish_to: 'none'
 version: 1.0.0+1
 

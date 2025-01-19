@@ -8,13 +8,13 @@ import '../models/task_list.dart';
 class RestDataService extends ChangeNotifier {
   static String get baseUrl {
     if (kReleaseMode) {
-      return 'https://yellowstone-api.tomyedwab.com';
+      return 'https://yellowstone.tomyedwab.com/api';
     } else {
       if (kIsWeb) {
-        return 'http://localhost:8334';
+        return 'http://localhost:8334/api';
       } else {
         // Android emulator needs special localhost address
-        return 'http://10.0.2.2:8334';
+        return 'http://10.0.2.2:8334/api';
       }
     }
   }

@@ -163,7 +163,7 @@ func taskDBById(db *sqlx.DB, id int) (TaskV1, error) {
 }
 
 func InitTaskHandlers(db *database.Database) {
-	http.HandleFunc("/task/list", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/task/list", func(w http.ResponseWriter, r *http.Request) {
 		listIdStr := r.URL.Query().Get("listId")
 		if listIdStr == "" {
 			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
@@ -180,7 +180,7 @@ func InitTaskHandlers(db *database.Database) {
 		database.HandleAPIResponse(w, resp, err)
 	})
 
-	http.HandleFunc("/task/get", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/task/get", func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.URL.Query().Get("id")
 		if idStr == "" {
 			http.Error(w, "Missing id parameter", http.StatusBadRequest)

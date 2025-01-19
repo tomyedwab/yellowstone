@@ -159,7 +159,7 @@ func taskListDBById(db *sqlx.DB, id int) (TaskListV1, error) {
 }
 
 func InitTaskListHandlers(db *database.Database) {
-	http.HandleFunc("/tasklist/get", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/tasklist/get", func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.URL.Query().Get("id")
 		if idStr == "" {
 			http.Error(w, "Missing id parameter", http.StatusBadRequest)
@@ -175,22 +175,22 @@ func InitTaskListHandlers(db *database.Database) {
 		resp, err := taskListDBById(db.GetDB(), id)
 		database.HandleAPIResponse(w, resp, err)
 	})
-	http.HandleFunc("/tasklist/all", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/tasklist/all", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := taskListDBAll(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
 
-	http.HandleFunc("/tasklist/todo", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/tasklist/todo", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := taskListDBToDo(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
 
-	http.HandleFunc("/tasklist/template", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/tasklist/template", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := taskListDBTemplate(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
 
-	http.HandleFunc("/tasklist/archived", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/tasklist/archived", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := taskListDBArchived(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
