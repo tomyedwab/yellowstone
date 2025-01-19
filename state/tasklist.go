@@ -162,6 +162,8 @@ func taskListDBById(db *sqlx.DB, id int) (TaskListV1, error) {
 func InitTaskListHandlers(db *database.Database) {
 	http.HandleFunc("/api/tasklist/get", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		idStr := r.URL.Query().Get("id")
 		if idStr == "" {
 			http.Error(w, "Missing id parameter", http.StatusBadRequest)
@@ -179,24 +181,32 @@ func InitTaskListHandlers(db *database.Database) {
 	})
 	http.HandleFunc("/api/tasklist/all", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		resp, err := taskListDBAll(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
 
 	http.HandleFunc("/api/tasklist/todo", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		resp, err := taskListDBToDo(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
 
 	http.HandleFunc("/api/tasklist/template", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		resp, err := taskListDBTemplate(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})
 
 	http.HandleFunc("/api/tasklist/archived", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		resp, err := taskListDBArchived(db.GetDB())
 		database.HandleAPIResponse(w, resp, err)
 	})

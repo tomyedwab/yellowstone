@@ -166,6 +166,8 @@ func taskDBById(db *sqlx.DB, id int) (TaskV1, error) {
 func InitTaskHandlers(db *database.Database) {
 	http.HandleFunc("/api/task/list", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		listIdStr := r.URL.Query().Get("listId")
 		if listIdStr == "" {
 			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
@@ -184,6 +186,8 @@ func InitTaskHandlers(db *database.Database) {
 
 	http.HandleFunc("/api/task/get", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		idStr := r.URL.Query().Get("id")
 		if idStr == "" {
 			http.Error(w, "Missing id parameter", http.StatusBadRequest)

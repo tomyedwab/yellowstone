@@ -65,6 +65,8 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 
 	http.HandleFunc("/api/publish", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
@@ -108,6 +110,8 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 
 	http.HandleFunc("/api/poll", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
 		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
