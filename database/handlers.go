@@ -1,15 +1,14 @@
 package database
 
 import (
-	"tomyedwab.com/yellowstone-server/state/middleware"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 
 	"tomyedwab.com/yellowstone-server/database/events"
+	"tomyedwab.com/yellowstone-server/database/middleware"
 )
 
 func waitForEventId(w http.ResponseWriter, r *http.Request, eventState *events.EventState) bool {
@@ -31,10 +30,6 @@ func waitForEventId(w http.ResponseWriter, r *http.Request, eventState *events.E
 }
 
 func HandleAPIResponse(w http.ResponseWriter, resp interface{}, err error) {
-	if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	}
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -65,59 +60,58 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 
 	http.HandleFunc("/api/publish", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
-		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		}
-		if r.Method == "OPTIONS" {
-			w.Header().Set("Access-Control-Allow-Methods", "POST")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-			return
-		}
-		if r.Method != "POST" {
-			http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
-			return
-		}
-		clientId := r.URL.Query().Get("cid")
-		if clientId == "" {
-			http.Error(w, "Missing client ID", http.StatusBadRequest)
-			return
-		}
-
-		buf, err := io.ReadAll(r.Body)
-		if err != nil {
-			HandleAPIResponse(w, nil, err)
-		}
-		event, err := events.ParseEvent(buf, mapper)
-		if err != nil {
-			HandleAPIResponse(w, nil, err)
-		}
-
-		newEventId, err := db.CreateEvent(event, buf, clientId)
-		if err == nil {
-			eventState.SetCurrentEventId(newEventId)
-		}
-		if err != nil {
-			// Special case for duplicate errors. We return a 200 in this case.
-			if duplicateErr, ok := err.(*DuplicateEventError); ok {
-				HandleAPIResponse(w, map[string]interface{}{"status": "duplicate", "id": duplicateErr.Id, "clientId": clientId}, nil)
+			if r.Method == "OPTIONS" {
+				w.Header().Set("Access-Control-Allow-Methods", "POST")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 				return
 			}
-		}
-		HandleAPIResponse(w, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
-	})
+			if r.Method != "POST" {
+				http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+				return
+			}
+			clientId := r.URL.Query().Get("cid")
+			if clientId == "" {
+				http.Error(w, "Missing client ID", http.StatusBadRequest)
+				return
+			}
+
+			buf, err := io.ReadAll(r.Body)
+			if err != nil {
+				HandleAPIResponse(w, nil, err)
+			}
+			event, err := events.ParseEvent(buf, mapper)
+			if err != nil {
+				HandleAPIResponse(w, nil, err)
+			}
+
+			newEventId, err := db.CreateEvent(event, buf, clientId)
+			if err == nil {
+				eventState.SetCurrentEventId(newEventId)
+			}
+			if err != nil {
+				// Special case for duplicate errors. We return a 200 in this case.
+				if duplicateErr, ok := err.(*DuplicateEventError); ok {
+					HandleAPIResponse(w, map[string]interface{}{"status": "duplicate", "id": duplicateErr.Id, "clientId": clientId}, nil)
+					return
+				}
+			}
+			HandleAPIResponse(w, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
+		},
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
+		middleware.EnableCrossOrigin,
+	))
 
 	http.HandleFunc("/api/poll", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			if !waitForEventId(w, r, eventState) {
+				return
+			}
+			HandleAPIResponse(w, map[string]interface{}{"id": eventState.CurrentEventId}, nil)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		}
-		if !waitForEventId(w, r, eventState) {
-			return
-		}
-		HandleAPIResponse(w, map[string]interface{}{"id": eventState.CurrentEventId}, nil)
-	})
+		middleware.EnableCrossOrigin,
+	))
+
 }
