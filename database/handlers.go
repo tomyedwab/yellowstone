@@ -1,6 +1,7 @@
 package database
 
 import (
+	"tomyedwab.com/yellowstone-server/state/middleware"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,11 +55,16 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 	}
 	eventState := events.NewEventState(initialEventId)
 
-	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "ok")
-	})
+	http.HandleFunc("/api/status", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "ok")
+		},
+		middleware.LogRequests,
+		middleware.RequireCloudFrontSecret,
+	))
 
-	http.HandleFunc("/api/publish", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/publish", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
 		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
@@ -100,7 +106,8 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 		HandleAPIResponse(w, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
 	})
 
-	http.HandleFunc("/api/poll", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/poll", middleware.Chain(
+		func(w http.ResponseWriter, r *http.Request) {
 		if os.Getenv("ENABLE_CROSS_ORIGIN") != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
