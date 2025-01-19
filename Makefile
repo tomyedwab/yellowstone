@@ -19,3 +19,5 @@ build-server:
 deploy: build-web
 	aws s3 sync ./frontend/build/web s3://yellowstone-tomyedwab-com/
 	aws cloudfront create-invalidation --distribution-id E23A9QHLPGZ5TU --paths "/*"
+
+# Auth comes from here: https://github.com/experoinc/aws-lambda-edge-oauth
