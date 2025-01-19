@@ -5,7 +5,7 @@ import 'pages/archived_lists_page.dart';
 import 'services/rest_data_service.dart';
 
 void main() {
-  runApp(const YellowstoneApp());
+  runApp(YellowstoneApp());
 }
 
 class YellowstoneApp extends StatelessWidget {

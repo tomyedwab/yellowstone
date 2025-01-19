@@ -10,8 +10,7 @@ import '../models/task_list.dart';
 http.Request CreateRequest(String url) {
   return http.Request('GET', Uri.parse(url))
     ..followRedirects = false
-    ..maxRedirects = 0
-    ..connectionTimeout = const Duration(seconds: 10);
+    ..maxRedirects = 0;
 }
 
 typedef LoginRedirectHandler = void Function(String loginUrl);
@@ -72,17 +71,14 @@ class RestDataService extends ChangeNotifier {
     }
     
     final Map<String, dynamic> data = json.decode(response.body);
-      final List<dynamic> taskLists = data['TaskLists'];
+    final List<dynamic> taskLists = data['TaskLists'];
       
-      return taskLists.map((json) => TaskList(
-        id: json['Id'],
-        title: json['Title'],
-        category: _categoryFromString(json['Category']),
-        archived: json['Archived'],
-      )).toList();
-    } else {
-      throw Exception('Failed to load task lists');
-    }
+    return taskLists.map((json) => TaskList(
+      id: json['Id'],
+      title: json['Title'],
+      category: _categoryFromString(json['Category']),
+      archived: json['Archived'],
+    )).toList();
   }
 
   TaskListCategory _categoryFromString(String category) {
