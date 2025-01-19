@@ -5,9 +5,19 @@ import 'package:http/http.dart' as http;
 import '../models/task.dart';
 import '../models/task_list.dart';
 
-const String baseUrl = 'http://localhost:8334';
-
 class RestDataService extends ChangeNotifier {
+  static String get baseUrl {
+    if (kReleaseMode) {
+      return 'https://yellowstone-api.tomyedwab.com';
+    } else {
+      if (kIsWeb) {
+        return 'http://localhost:8334';
+      } else {
+        // Android emulator needs special localhost address
+        return 'http://10.0.2.2:8334';
+      }
+    }
+  }
   static final RestDataService _instance = RestDataService._internal();
   
   factory RestDataService() {
