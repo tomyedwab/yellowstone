@@ -1,7 +1,6 @@
 package state
 
 import (
-	"tomyedwab.com/yellowstone-server/state/middleware"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 
 	"tomyedwab.com/yellowstone-server/database"
 	"tomyedwab.com/yellowstone-server/database/events"
+	"tomyedwab.com/yellowstone-server/database/middleware"
 )
 
 // Table schema
@@ -166,41 +166,43 @@ func taskDBById(db *sqlx.DB, id int) (TaskV1, error) {
 func InitTaskHandlers(db *database.Database) {
 	http.HandleFunc("/api/task/list", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			listIdStr := r.URL.Query().Get("listId")
+			if listIdStr == "" {
+				http.Error(w, "Missing listId parameter", http.StatusBadRequest)
+				return
+			}
+
+			listId, err := strconv.Atoi(listIdStr)
+			if err != nil {
+				http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
+				return
+			}
+
+			resp, err := taskDBForList(db.GetDB(), listId)
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		listIdStr := r.URL.Query().Get("listId")
-		if listIdStr == "" {
-			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
-			return
-		}
-
-		listId, err := strconv.Atoi(listIdStr)
-		if err != nil {
-			http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskDBForList(db.GetDB(), listId)
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 
 	http.HandleFunc("/api/task/get", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			idStr := r.URL.Query().Get("id")
+			if idStr == "" {
+				http.Error(w, "Missing id parameter", http.StatusBadRequest)
+				return
+			}
+
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+				return
+			}
+
+			resp, err := taskDBById(db.GetDB(), id)
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		idStr := r.URL.Query().Get("id")
-		if idStr == "" {
-			http.Error(w, "Missing id parameter", http.StatusBadRequest)
-			return
-		}
-
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskDBById(db.GetDB(), id)
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 }

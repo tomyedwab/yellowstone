@@ -1,7 +1,6 @@
 package state
 
 import (
-	"tomyedwab.com/yellowstone-server/state/middleware"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 
 	"tomyedwab.com/yellowstone-server/database"
 	"tomyedwab.com/yellowstone-server/database/events"
+	"tomyedwab.com/yellowstone-server/database/middleware"
 )
 
 // Table schema
@@ -162,52 +162,57 @@ func taskListDBById(db *sqlx.DB, id int) (TaskListV1, error) {
 func InitTaskListHandlers(db *database.Database) {
 	http.HandleFunc("/api/tasklist/get", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			idStr := r.URL.Query().Get("id")
+			if idStr == "" {
+				http.Error(w, "Missing id parameter", http.StatusBadRequest)
+				return
+			}
+
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+				return
+			}
+
+			resp, err := taskListDBById(db.GetDB(), id)
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		idStr := r.URL.Query().Get("id")
-		if idStr == "" {
-			http.Error(w, "Missing id parameter", http.StatusBadRequest)
-			return
-		}
-
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskListDBById(db.GetDB(), id)
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 	http.HandleFunc("/api/tasklist/all", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			resp, err := taskListDBAll(db.GetDB())
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		resp, err := taskListDBAll(db.GetDB())
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 
 	http.HandleFunc("/api/tasklist/todo", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			resp, err := taskListDBToDo(db.GetDB())
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		resp, err := taskListDBToDo(db.GetDB())
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 
 	http.HandleFunc("/api/tasklist/template", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			resp, err := taskListDBTemplate(db.GetDB())
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		resp, err := taskListDBTemplate(db.GetDB())
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 
 	http.HandleFunc("/api/tasklist/archived", middleware.Chain(
 		func(w http.ResponseWriter, r *http.Request) {
+			resp, err := taskListDBArchived(db.GetDB())
+			database.HandleAPIResponse(w, resp, err)
+		},
 		middleware.LogRequests,
 		middleware.RequireCloudFrontSecret,
-		resp, err := taskListDBArchived(db.GetDB())
-		database.HandleAPIResponse(w, resp, err)
-	})
+	))
 }
