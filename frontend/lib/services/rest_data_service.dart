@@ -57,6 +57,9 @@ class RestDataService extends ChangeNotifier {
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
     final response = await http.get(Uri.parse('$baseUrl/tasklist/all'));
     _handleResponse(response);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load task lists: ${response.body}');
+    }
     
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -87,14 +90,14 @@ class RestDataService extends ChangeNotifier {
   Future<TaskList> getTaskListById(int taskListId) async {
     // Get the task list details
     final listResponse = await http.get(Uri.parse('$baseUrl/tasklist/get?id=$taskListId'));
-    
+    _handleResponse(listResponse);
     if (listResponse.statusCode != 200) {
       throw Exception('Failed to load task list: ${listResponse.body}');
     }
 
     // Get the tasks for this list
     final tasksResponse = await http.get(Uri.parse('$baseUrl/task/list?listId=$taskListId'));
-    
+    _handleResponse(tasksResponse);
     if (tasksResponse.statusCode != 200) {
       throw Exception('Failed to load tasks: ${tasksResponse.body}');
     }
@@ -135,7 +138,7 @@ class RestDataService extends ChangeNotifier {
 
   Future<List<Task>> getTasksForList(int taskListId) async {
     final response = await http.get(Uri.parse('$baseUrl/task/list?listId=$taskListId'));
-    
+    _handleResponse(response);
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final List<dynamic> tasksData = data['Tasks'];
