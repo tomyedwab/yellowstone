@@ -4,26 +4,29 @@ import '../models/task_list.dart';
 import 'task_list_view.dart';
 
 class ToDoListsPage extends StatefulWidget {
-  const ToDoListsPage({super.key});
+  final RestDataService dataService;
+  const ToDoListsPage({
+    super.key,
+    required this.dataService,
+  });
 
   @override
   State<ToDoListsPage> createState() => _ToDoListsPageState();
 }
 
 class _ToDoListsPageState extends State<ToDoListsPage> {
-  final RestDataService _restDataService = RestDataService();
   List<TaskList> _taskLists = [];
 
   @override
   void initState() {
     super.initState();
-    _restDataService.addListener(_onDataChanged);
+    widget.dataService.addListener(_onDataChanged);
     _loadTaskLists();
   }
 
   @override
   void dispose() {
-    _restDataService.removeListener(_onDataChanged);
+    widget.dataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
@@ -33,7 +36,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
 
   Future<void> _loadTaskLists() async {
     try {
-      final lists = await _restDataService.getTaskLists();
+      final lists = await widget.dataService.getTaskLists();
       setState(() {
         _taskLists = lists.where((list) => list.category == TaskListCategory.toDoList && !list.archived).toList();
       });
@@ -62,11 +65,11 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                 
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
-                  _restDataService.reorderTaskLists(movedList.id, null);
+                  widget.dataService.reorderTaskLists(movedList.id, null);
                 } else {
                   // Otherwise place after the item that's now at newIndex-1
                   final afterList = _taskLists[newIndex - 1];
-                  _restDataService.reorderTaskLists(movedList.id, afterList.id);
+                  widget.dataService.reorderTaskLists(movedList.id, afterList.id);
                 }
               },
               itemBuilder: (context, index) {
@@ -92,7 +95,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                         IconButton(
                           icon: const Icon(Icons.archive),
                           onPressed: () {
-                            _restDataService.archiveTaskList(taskList.id);
+                            widget.dataService.archiveTaskList(taskList.id);
                           },
                         ),
                       ],
@@ -101,7 +104,10 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => TaskListView(taskListId: taskList.id),
+                          builder: (context) => TaskListView(
+                            dataService: widget.dataService,
+                            taskListId: taskList.id,
+                          ),
                         ),
                       );
                     },
@@ -127,7 +133,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                       ),
                       onSubmitted: (value) {
                         if (value.isNotEmpty) {
-                          _restDataService.createTaskList(
+                          widget.dataService.createTaskList(
                             value,
                             TaskListCategory.toDoList,
                           );

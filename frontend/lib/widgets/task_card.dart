@@ -5,6 +5,7 @@ import '../models/task_list.dart';
 import '../services/rest_data_service.dart';
 
 class TaskCard extends StatefulWidget {
+  final RestDataService dataService;
   final Task task;
   final TaskListCategory category;
   final VoidCallback? onComplete;
@@ -12,6 +13,7 @@ class TaskCard extends StatefulWidget {
 
   const TaskCard({
     super.key,
+    required this.dataService,
     required this.task,
     required this.category,
     this.onComplete,
@@ -22,7 +24,6 @@ class TaskCard extends StatefulWidget {
 }
 
 class _TaskCardState extends State<TaskCard> {
-  final RestDataService _restDataService = RestDataService();
   bool _isEditing = false;
   late TextEditingController _titleController;
 
@@ -47,17 +48,17 @@ class _TaskCardState extends State<TaskCard> {
     );
     
     if (date != null) {
-      _restDataService.updateTaskDueDate(widget.task.id, date);
+      widget.dataService.updateTaskDueDate(widget.task.id, date);
     }
   }
 
   void _clearDueDate() {
-    _restDataService.updateTaskDueDate(widget.task.id, null);
+    widget.dataService.updateTaskDueDate(widget.task.id, null);
   }
 
   void _saveTitle() {
     if (_titleController.text.isNotEmpty) {
-      _restDataService.updateTaskTitle(widget.task.id, _titleController.text);
+      widget.dataService.updateTaskTitle(widget.task.id, _titleController.text);
       setState(() => _isEditing = false);
     }
   }
@@ -144,7 +145,7 @@ class _TaskCardState extends State<TaskCard> {
                               TextButton(
                                 onPressed: () {
                                   Navigator.pop(context);
-                                  _restDataService.deleteTask(
+                                  widget.dataService.deleteTask(
                                     widget.task.taskListId,
                                     widget.task.id,
                                   );

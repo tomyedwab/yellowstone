@@ -4,10 +4,12 @@ import '../widgets/task_list_widget.dart';
 import '../models/task_list.dart';
 
 class TaskListView extends StatefulWidget {
+  final RestDataService dataService;
   final int taskListId;
 
   const TaskListView({
     super.key,
+    required this.dataService,
     required this.taskListId,
   });
 
@@ -16,19 +18,18 @@ class TaskListView extends StatefulWidget {
 }
 
 class _TaskListViewState extends State<TaskListView> {
-  final RestDataService _restDataService = RestDataService();
   TaskList? _taskList;
 
   @override
   void initState() {
     super.initState();
-    _restDataService.addListener(_onDataChanged);
+    widget.dataService.addListener(_onDataChanged);
     _loadTaskList();
   }
 
   @override
   void dispose() {
-    _restDataService.removeListener(_onDataChanged);
+    widget.dataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
@@ -38,7 +39,7 @@ class _TaskListViewState extends State<TaskListView> {
 
   Future<void> _loadTaskList() async {
     try {
-      final taskList = await _restDataService.getTaskListById(widget.taskListId);
+      final taskList = await widget.dataService.getTaskListById(widget.taskListId);
       setState(() {
         _taskList = taskList;
       });
@@ -66,7 +67,10 @@ class _TaskListViewState extends State<TaskListView> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SingleChildScrollView(
-        child: TaskListWidget(taskListId: widget.taskListId),
+        child: TaskListWidget(
+          dataService: widget.dataService,
+          taskListId: widget.taskListId,
+        ),
       ),
     );
   }

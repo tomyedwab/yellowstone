@@ -4,26 +4,26 @@ import '../models/task_list.dart';
 import 'task_list_view.dart';
 
 class ArchivedListsPage extends StatefulWidget {
-  const ArchivedListsPage({super.key});
+  final RestDataService dataService;
+  const ArchivedListsPage({super.key, required this.dataService});
 
   @override
   State<ArchivedListsPage> createState() => _ArchivedListsPageState();
 }
 
 class _ArchivedListsPageState extends State<ArchivedListsPage> {
-  final RestDataService _restDataService = RestDataService();
   List<TaskList> _taskLists = [];
 
   @override
   void initState() {
     super.initState();
-    _restDataService.addListener(_onDataChanged);
+    widget.dataService.addListener(_onDataChanged);
     _loadTaskLists();
   }
 
   @override
   void dispose() {
-    _restDataService.removeListener(_onDataChanged);
+    widget.dataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
@@ -33,7 +33,7 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
 
   Future<void> _loadTaskLists() async {
     try {
-      final lists = await _restDataService.getTaskLists();
+      final lists = await widget.dataService.getTaskLists();
       setState(() {
         _taskLists = lists.where((list) => list.archived).toList();
       });
@@ -76,7 +76,7 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
                   IconButton(
                     icon: const Icon(Icons.unarchive),
                     onPressed: () {
-                      _restDataService.unarchiveTaskList(taskList.id);
+                      widget.dataService.unarchiveTaskList(taskList.id);
                     },
                   ),
                 ],
@@ -85,7 +85,10 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TaskListView(taskListId: taskList.id),
+                    builder: (context) => TaskListView(
+                      dataService: widget.dataService,
+                      taskListId: taskList.id,
+                    ),
                   ),
                 );
               },

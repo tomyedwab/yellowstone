@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../services/rest_data_service.dart';
 
 class NewTaskCard extends StatefulWidget {
+  final RestDataService dataService;
   final int taskListId;
 
   const NewTaskCard({
     super.key,
+    required this.dataService,
     required this.taskListId,
   });
 
@@ -14,7 +16,6 @@ class NewTaskCard extends StatefulWidget {
 }
 
 class _NewTaskCardState extends State<NewTaskCard> {
-  final RestDataService _restDataService = RestDataService();
   final TextEditingController _titleController = TextEditingController();
 
   @override
@@ -26,7 +27,7 @@ class _NewTaskCardState extends State<NewTaskCard> {
   void _createTask() {
     final title = _titleController.text.trim();
     if (title.isNotEmpty) {
-      _restDataService.createTask(widget.taskListId, title);
+      widget.dataService.createTask(widget.taskListId, title);
       _titleController.clear();
     }
   }

@@ -4,26 +4,26 @@ import '../models/task_list.dart';
 import 'task_list_view.dart';
 
 class TemplatesPage extends StatefulWidget {
-  const TemplatesPage({super.key});
+  final RestDataService dataService;
+  const TemplatesPage({super.key, required this.dataService});
 
   @override
   State<TemplatesPage> createState() => _TemplatesPageState();
 }
 
 class _TemplatesPageState extends State<TemplatesPage> {
-  final RestDataService _restDataService = RestDataService();
   List<TaskList> _taskLists = [];
 
   @override
   void initState() {
     super.initState();
-    _restDataService.addListener(_onDataChanged);
+    widget.dataService.addListener(_onDataChanged);
     _loadTaskLists();
   }
 
   @override
   void dispose() {
-    _restDataService.removeListener(_onDataChanged);
+    widget.dataService.removeListener(_onDataChanged);
     super.dispose();
   }
 
@@ -33,7 +33,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   Future<void> _loadTaskLists() async {
     try {
-      final lists = await _restDataService.getTaskLists();
+      final lists = await widget.dataService.getTaskLists();
       setState(() {
         _taskLists = lists.where((list) => list.category == TaskListCategory.template && !list.archived).toList();
       });
@@ -62,11 +62,11 @@ class _TemplatesPageState extends State<TemplatesPage> {
                 
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
-                  _restDataService.reorderTaskLists(movedList.id, null);
+                  widget.dataService.reorderTaskLists(movedList.id, null);
                 } else {
                   // Otherwise place after the item that's now at newIndex-1
                   final afterList = _taskLists[newIndex - 1];
-                  _restDataService.reorderTaskLists(movedList.id, afterList.id);
+                  widget.dataService.reorderTaskLists(movedList.id, afterList.id);
                 }
               },
               itemBuilder: (context, index) {
@@ -88,7 +88,10 @@ class _TemplatesPageState extends State<TemplatesPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TaskListView(taskListId: template.id),
+                    builder: (context) => TaskListView(
+                      dataService: widget.dataService,
+                      taskListId: template.id,
+                    ),
                   ),
                 );
               },
@@ -114,7 +117,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
                       ),
                       onSubmitted: (value) {
                         if (value.isNotEmpty) {
-                          _restDataService.createTaskList(
+                          widget.dataService.createTaskList(
                             value,
                             TaskListCategory.template,
                           );

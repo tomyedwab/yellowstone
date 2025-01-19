@@ -6,10 +6,12 @@ import 'task_card.dart';
 import 'new_task_card.dart';
 
 class TaskListWidget extends StatefulWidget {
+  final RestDataService dataService;
   final int taskListId;
 
   const TaskListWidget({
     super.key,
+    required this.dataService,
     required this.taskListId,
   });
 
@@ -18,7 +20,6 @@ class TaskListWidget extends StatefulWidget {
 }
 
 class _TaskListWidgetState extends State<TaskListWidget> {
-  final RestDataService _restDataService = RestDataService();
   List<Task> _tasks = [];
   bool _isEditing = false;
   late TextEditingController _titleController;
@@ -26,14 +27,14 @@ class _TaskListWidgetState extends State<TaskListWidget> {
   @override
   void initState() {
     super.initState();
-    _restDataService.addListener(_onDataChanged);
+    widget.dataService.addListener(_onDataChanged);
     _loadTasks();
     _titleController = TextEditingController();
   }
 
   @override
   void dispose() {
-    _restDataService.removeListener(_onDataChanged);
+    widget.dataService.removeListener(_onDataChanged);
     _titleController.dispose();
     super.dispose();
   }
@@ -44,7 +45,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   Future<void> _loadTasks() async {
     try {
-      final tasks = await _restDataService.getTasksForList(widget.taskListId);
+      final tasks = await widget.dataService.getTasksForList(widget.taskListId);
       setState(() {
         _tasks = tasks;
       });
@@ -61,7 +62,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   void _saveTitle() {
     if (_titleController.text.isNotEmpty) {
-      _restDataService.updateTaskListTitle(
+      widget.dataService.updateTaskListTitle(
         widget.taskListId,
         _titleController.text,
       );
@@ -72,7 +73,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<TaskList>(
-      future: _restDataService.getTaskListById(widget.taskListId),
+      future: widget.dataService.getTaskListById(widget.taskListId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -136,18 +137,23 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     onReorder: (oldIndex, newIndex) {
-                      _restDataService.reorderTasks(taskList.id, oldIndex, newIndex);
+                      widget.dataService.reorderTasks(
+                        taskList.id,
+                        oldIndex,
+                        newIndex,
+                      );
                     },
                     children: [
                       for (final taskId in taskList.taskIds)
                         KeyedSubtree(
                           key: ValueKey(taskId),
                           child: TaskCard(
+                            dataService: widget.dataService,
                             task: _tasks.firstWhere((t) => t.id == taskId),
                             category: taskList.category,
                             onComplete: () {
                               final task = _tasks.firstWhere((t) => t.id == taskId);
-                              _restDataService.markTaskComplete(
+                              widget.dataService.markTaskComplete(
                                 task.id,
                                 !task.isCompleted,
                               );
@@ -156,7 +162,10 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                         ),
                     ],
                   ),
-                NewTaskCard(taskListId: taskList.id),
+                NewTaskCard(
+                  dataService: widget.dataService,
+                  taskListId: taskList.id,
+                ),
               ],
             ),
           ],
