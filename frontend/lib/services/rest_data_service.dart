@@ -3,14 +3,18 @@ import 'dart:math';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:webview_cookie_jar/webview_cookie_jar.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 
 // Utility function to create a request for a url without following redirects
-http.Request CreateRequest(String url) {
-  return http.Request('GET', Uri.parse(url))
+Future<http.Request> CreateRequest(String url) async {
+  final request = http.Request('GET', Uri.parse(url))
     ..followRedirects = false
     ..maxRedirects = 0;
+  final cookies = await WebViewCookieJar.cookieJar.loadForRequest(request.url);
+  request.headers['Cookie'] = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+  return request;
 }
 
 typedef LoginRedirectHandler = void Function(String loginUrl);
@@ -63,7 +67,7 @@ class RestDataService extends ChangeNotifier {
 
   // Mock implementations for now
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
-    final streamedResponse = await http.Client().send(CreateRequest('$baseUrl/tasklist/all'));
+    final streamedResponse = await http.Client().send(await CreateRequest('$baseUrl/tasklist/all'));
     final response = await http.Response.fromStream(streamedResponse);
     _handleResponse(response);
     if (response.statusCode != 200) {
@@ -94,7 +98,7 @@ class RestDataService extends ChangeNotifier {
 
   Future<TaskList> getTaskListById(int taskListId) async {
     // Get the task list details
-    final listStreamedResponse = await http.Client().send(CreateRequest('$baseUrl/tasklist/get?id=$taskListId'));
+    final listStreamedResponse = await http.Client().send(await CreateRequest('$baseUrl/tasklist/get?id=$taskListId'));
     final listResponse = await http.Response.fromStream(listStreamedResponse);
     _handleResponse(listResponse);
     if (listResponse.statusCode != 200) {
@@ -102,7 +106,7 @@ class RestDataService extends ChangeNotifier {
     }
 
     // Get the tasks for this list
-    final tasksStreamedResponse = await http.Client().send(CreateRequest('$baseUrl/task/list?listId=$taskListId'));
+    final tasksStreamedResponse = await http.Client().send(await CreateRequest('$baseUrl/task/list?listId=$taskListId'));
     final tasksResponse = await http.Response.fromStream(tasksStreamedResponse);
     _handleResponse(tasksResponse);
     if (tasksResponse.statusCode != 200) {
@@ -144,7 +148,7 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<List<Task>> getTasksForList(int taskListId) async {
-    final streamedResponse = await http.Client().send(CreateRequest('$baseUrl/task/list?listId=$taskListId'));
+    final streamedResponse = await http.Client().send(await CreateRequest('$baseUrl/task/list?listId=$taskListId'));
     final response = await http.Response.fromStream(streamedResponse);
     _handleResponse(response);
     if (response.statusCode == 200) {

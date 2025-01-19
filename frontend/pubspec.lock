@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.0"
+  cookie_jar:
+    dependency: transitive
+    description:
+      name: cookie_jar
+      sha256: a6ac027d3ed6ed756bfce8f3ff60cb479e266f3b0fdabd6242b804b6765e52de
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.8"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -232,6 +240,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: "1722b2dcc462b4b2f3ee7d188dad008b6eb4c40bbd03a3de451d82c78bba9aad"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.2"
   vector_math:
     dependency: transitive
     description:
@@ -256,6 +272,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  webview_cookie_jar:
+    dependency: "direct main"
+    description:
+      name: webview_cookie_jar
+      sha256: "88d8003e98d0f6abc10a6db761d2de4afcd3e5e0dacbe622b42f8b452dfe781e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   webview_flutter:
     dependency: "direct main"
     description:
