@@ -64,14 +64,14 @@ class RestDataService extends ChangeNotifier {
 
   // Mock implementations for now
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
-    final response = await http.Client().send(CreateRequest('$baseUrl/tasklist/all'));
+    final streamedResponse = await http.Client().send(CreateRequest('$baseUrl/tasklist/all'));
+    final response = await http.Response.fromStream(streamedResponse);
     _handleResponse(response);
     if (response.statusCode != 200) {
       throw Exception('Failed to load task lists');
     }
     
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
+    final Map<String, dynamic> data = json.decode(response.body);
       final List<dynamic> taskLists = data['TaskLists'];
       
       return taskLists.map((json) => TaskList(
@@ -98,14 +98,16 @@ class RestDataService extends ChangeNotifier {
 
   Future<TaskList> getTaskListById(int taskListId) async {
     // Get the task list details
-    final listResponse = await http.Client().send(CreateRequest('$baseUrl/tasklist/get?id=$taskListId'));
+    final listStreamedResponse = await http.Client().send(CreateRequest('$baseUrl/tasklist/get?id=$taskListId'));
+    final listResponse = await http.Response.fromStream(listStreamedResponse);
     _handleResponse(listResponse);
     if (listResponse.statusCode != 200) {
       throw Exception('Failed to load task list: ${listResponse.body}');
     }
 
     // Get the tasks for this list
-    final tasksResponse = await http.Client().send(CreateRequest('$baseUrl/task/list?listId=$taskListId'));
+    final tasksStreamedResponse = await http.Client().send(CreateRequest('$baseUrl/task/list?listId=$taskListId'));
+    final tasksResponse = await http.Response.fromStream(tasksStreamedResponse);
     _handleResponse(tasksResponse);
     if (tasksResponse.statusCode != 200) {
       throw Exception('Failed to load tasks: ${tasksResponse.body}');
@@ -146,7 +148,8 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<List<Task>> getTasksForList(int taskListId) async {
-    final response = await http.Client().send(CreateRequest('$baseUrl/task/list?listId=$taskListId'));
+    final streamedResponse = await http.Client().send(CreateRequest('$baseUrl/task/list?listId=$taskListId'));
+    final response = await http.Response.fromStream(streamedResponse);
     _handleResponse(response);
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
