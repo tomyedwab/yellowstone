@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'pages/todo_lists_page.dart';
 import 'pages/templates_page.dart';
 import 'pages/archived_lists_page.dart';
+import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
 
 void main() {
@@ -11,16 +12,24 @@ void main() {
 class YellowstoneApp extends StatelessWidget {
   YellowstoneApp({super.key}) {
     _dataService.setLoginRedirectHandler((url) {
-      // TODO: Implement login redirect
-      print('Login redirect to: $url');
+      // Navigate to login page when a redirect is received
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => LoginPage(loginUrl: url),
+        ),
+      );
     });
   }
 
   final RestDataService _dataService = RestDataService();
 
+  // Global navigator key to enable navigation from outside of build context
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Yellowstone',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
