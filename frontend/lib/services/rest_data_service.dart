@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import '../models/task.dart';
 import '../models/task_list.dart';
 
+typedef LoginRedirectHandler = void Function(String loginUrl);
+
 class RestDataService extends ChangeNotifier {
   static String get baseUrl {
     if (kReleaseMode) {
@@ -27,9 +29,24 @@ class RestDataService extends ChangeNotifier {
   RestDataService._internal() {
     _random = Random();
   }
+
+  void setLoginRedirectHandler(LoginRedirectHandler handler) {
+    _loginRedirectHandler = handler;
+  }
+
+  void _handleResponse(http.Response response) {
+    if (response.statusCode == 302) {
+      final location = response.headers['location'];
+      if (location != null && _loginRedirectHandler != null) {
+        _loginRedirectHandler!(location);
+        throw Exception('Redirecting to login');
+      }
+    }
+  }
   
   late final Random _random;
   final Map<int, Task> _tasks = {};
+  LoginRedirectHandler? _loginRedirectHandler;
   
   String _generateClientId() {
     return List.generate(16, (_) => _random.nextInt(16).toRadixString(16)).join();
@@ -38,6 +55,7 @@ class RestDataService extends ChangeNotifier {
   // Mock implementations for now
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
     final response = await http.get(Uri.parse('$baseUrl/tasklist/all'));
+    _handleResponse(response);
     
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
