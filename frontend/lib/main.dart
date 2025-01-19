@@ -4,16 +4,16 @@ import 'pages/templates_page.dart';
 import 'pages/archived_lists_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const YellowstoneApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class YellowstoneApp extends StatelessWidget {
+  const YellowstoneApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Task Lists',
+      title: 'Yellowstone',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
