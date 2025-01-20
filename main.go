@@ -9,8 +9,6 @@ import (
 	"tomyedwab.com/yellowstone-server/state"
 )
 
-// TODO(tom): Authentication
-
 func main() {
 	db, err := database.Connect("sqlite3", "yellowstone.db", map[string]database.EventUpdateHandler{
 		"task_list_v1":    state.TaskListDBHandleEvent,
