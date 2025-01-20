@@ -13,11 +13,12 @@ build-web:
 build-android:
 	cd frontend && flutter build apk
 
-build-server:
-	go build -o yellowstone-server main.go
-
 deploy: build-web
 	aws s3 sync ./frontend/build/web s3://yellowstone-tomyedwab-com/
 	aws cloudfront create-invalidation --distribution-id E23A9QHLPGZ5TU --paths "/*"
+
+push-server-image:
+	docker build -t tomyedwab/yellowstone-arm64 -f Dockerfile.arm64 .
+	docker push tomyedwab/yellowstone-arm64
 
 # Auth comes from here: https://github.com/experoinc/aws-lambda-edge-oauth
