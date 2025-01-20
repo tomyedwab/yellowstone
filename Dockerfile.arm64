@@ -1,0 +1,24 @@
+FROM golang:1.23-bookworm AS builder
+
+COPY go.mod go.sum /src/
+
+RUN wget -P ~ https://musl.cc/aarch64-linux-musl-cross.tgz
+RUN tar -xvf ~/aarch64-linux-musl-cross.tgz -C ~
+
+WORKDIR /src
+RUN go mod download
+
+
+COPY main.go /src/
+COPY database /src/database
+COPY state /src/state
+RUN GOOS=linux GOARCH=arm64 CGO_ENABLED=1 \
+  CC=~/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc \
+  go build -o yellowstone-server -a -ldflags=-extldflags=-static main.go
+
+FROM --platform=linux/arm64 arm64v8/debian:12.9
+
+COPY --from=builder /src/yellowstone-server /usr/local/bin/yellowstone-server
+WORKDIR /data
+
+CMD ["/usr/local/bin/yellowstone-server"]
