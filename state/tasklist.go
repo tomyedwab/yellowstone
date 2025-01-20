@@ -160,7 +160,7 @@ func taskListDBById(db *sqlx.DB, id int) (TaskListV1, error) {
 }
 
 func InitTaskListHandlers(db *database.Database) {
-	http.HandleFunc("/api/tasklist/get", middleware.Chain(
+	http.HandleFunc("/api/tasklist/get", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			idStr := r.URL.Query().Get("id")
 			if idStr == "" {
@@ -177,42 +177,32 @@ func InitTaskListHandlers(db *database.Database) {
 			resp, err := taskListDBById(db.GetDB(), id)
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
-	http.HandleFunc("/api/tasklist/all", middleware.Chain(
+	http.HandleFunc("/api/tasklist/all", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			resp, err := taskListDBAll(db.GetDB())
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 
-	http.HandleFunc("/api/tasklist/todo", middleware.Chain(
+	http.HandleFunc("/api/tasklist/todo", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			resp, err := taskListDBToDo(db.GetDB())
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 
-	http.HandleFunc("/api/tasklist/template", middleware.Chain(
+	http.HandleFunc("/api/tasklist/template", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			resp, err := taskListDBTemplate(db.GetDB())
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 
-	http.HandleFunc("/api/tasklist/archived", middleware.Chain(
+	http.HandleFunc("/api/tasklist/archived", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			resp, err := taskListDBArchived(db.GetDB())
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 }

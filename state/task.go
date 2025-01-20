@@ -164,7 +164,7 @@ func taskDBById(db *sqlx.DB, id int) (TaskV1, error) {
 }
 
 func InitTaskHandlers(db *database.Database) {
-	http.HandleFunc("/api/task/list", middleware.Chain(
+	http.HandleFunc("/api/task/list", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			listIdStr := r.URL.Query().Get("listId")
 			if listIdStr == "" {
@@ -181,11 +181,9 @@ func InitTaskHandlers(db *database.Database) {
 			resp, err := taskDBForList(db.GetDB(), listId)
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 
-	http.HandleFunc("/api/task/get", middleware.Chain(
+	http.HandleFunc("/api/task/get", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			idStr := r.URL.Query().Get("id")
 			if idStr == "" {
@@ -202,7 +200,5 @@ func InitTaskHandlers(db *database.Database) {
 			resp, err := taskDBById(db.GetDB(), id)
 			database.HandleAPIResponse(w, resp, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 }

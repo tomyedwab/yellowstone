@@ -50,15 +50,13 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 	}
 	eventState := events.NewEventState(initialEventId)
 
-	http.HandleFunc("/api/status", middleware.Chain(
+	http.HandleFunc("/api/status", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "ok")
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
 	))
 
-	http.HandleFunc("/api/publish", middleware.Chain(
+	http.HandleFunc("/api/publish", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == "OPTIONS" {
 				w.Header().Set("Access-Control-Allow-Methods", "POST")
@@ -97,21 +95,15 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 			}
 			HandleAPIResponse(w, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
-		middleware.EnableCrossOrigin,
 	))
 
-	http.HandleFunc("/api/poll", middleware.Chain(
+	http.HandleFunc("/api/poll", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			if !waitForEventId(w, r, eventState) {
 				return
 			}
 			HandleAPIResponse(w, map[string]interface{}{"id": eventState.CurrentEventId}, nil)
 		},
-		middleware.LogRequests,
-		middleware.RequireCloudFrontSecret,
-		middleware.EnableCrossOrigin,
 	))
 
 }
