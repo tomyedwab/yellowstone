@@ -55,6 +55,12 @@ type UpdateTaskDueDateEvent struct {
 	DueDate *time.Time `db:"due_date"`
 }
 
+type DeleteTaskEvent struct {
+	events.GenericEvent
+
+	TaskId int `db:"task_id"`
+}
+
 // Event handler
 
 const insertTaskV1Sql = `
@@ -77,6 +83,11 @@ WHERE id = :task_id;
 const updateTaskDueDateV1Sql = `
 UPDATE task_v1
 SET due_date = :due_date
+WHERE id = :task_id;
+`
+
+const deleteTaskV1Sql = `
+DELETE FROM task_v1
 WHERE id = :task_id;
 `
 
@@ -135,7 +146,16 @@ func TaskDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 			*evt,
 		)
 		return true, err
+
+	case *DeleteTaskEvent:
+		fmt.Printf("Task v1: DeleteTaskEvent %d %d\n", evt.Id, evt.TaskId)
+		_, err := tx.NamedExec(
+			deleteTaskV1Sql,
+			*evt,
+		)
+		return true, err
 	}
+
 	return false, nil
 }
 

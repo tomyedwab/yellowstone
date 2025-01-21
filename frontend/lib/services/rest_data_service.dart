@@ -227,8 +227,11 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteTask(int taskListId, int taskId) {
-    // TODO: Implement REST call
+  Future<void> deleteTask(int taskListId, int taskId) async {
+    await doPublishRequest({
+      'type': 'yellowstone:deleteTask',
+      'taskId': taskId,
+    });
     notifyListeners();
   }
 

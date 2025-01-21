@@ -164,16 +164,16 @@ class _TaskCardState extends State<TaskCard> {
                 builder: (context) => TaskOptionsSheet(
                   task: widget.task,
                   onDelete: () {
-                        Navigator.pop(context);
-                        widget.dataService.deleteTask(
-                          widget.task.taskListId,
-                          widget.task.id,
-                        );
-                      },
-                      onEditDueDate: _selectDueDate,
-                      onClearDueDate: _clearDueDate,
-                    ),
-                  );
+                      Navigator.pop(context);
+                      widget.dataService.deleteTask(
+                        widget.task.taskListId,
+                        widget.task.id,
+                      );
+                    },
+                    onEditDueDate: _selectDueDate,
+                    onClearDueDate: _clearDueDate,
+                  ),
+                );
             },
             child: const Icon(Icons.more_vert),
           ),

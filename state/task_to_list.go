@@ -34,6 +34,11 @@ SELECT :task_id, :list_id, COALESCE(MAX(position), 0) + 1
 FROM task_to_list_v1 WHERE list_id = :list_id;
 `
 
+const deleteTaskToListV1Sql = `
+DELETE FROM task_to_list_v1
+WHERE task_id = :task_id;
+`
+
 func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 	switch evt := event.(type) {
 	case *events.DBInitEvent:
@@ -44,6 +49,11 @@ func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 	case *AddTaskToListEvent:
 		fmt.Printf("TaskToList v1: AddTaskToListEvent %d %d %d\n", evt.Id, evt.TaskId, evt.ListId)
 		_, err := tx.NamedExec(insertTaskToListV1Sql, evt)
+		return true, err
+
+	case *DeleteTaskEvent:
+		fmt.Printf("TaskToList v1: DeleteTaskEvent %d %d\n", evt.Id, evt.TaskId)
+		_, err := tx.NamedExec(deleteTaskToListV1Sql, evt)
 		return true, err
 	}
 	return false, nil
