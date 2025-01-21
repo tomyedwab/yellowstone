@@ -73,9 +73,17 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
               },
               itemBuilder: (context, index) {
                 final taskList = taskLists[index];
-                return Card(
+                return Container(
                   key: ValueKey(taskList.id),
-                  margin: const EdgeInsets.all(8.0),
+                  margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Color(0xff182631),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
                   child: ListTile(
                     title: Text(taskList.title),
                     subtitle: Text('${taskList.taskIds.length} tasks'),

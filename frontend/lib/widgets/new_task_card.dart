@@ -36,8 +36,12 @@ class _NewTaskCardState extends State<NewTaskCard> {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(8.0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(0),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.only(left: 56.0, right: 16.0, top: 4.0, bottom: 4.0),
         child: Row(
           children: [
             Expanded(

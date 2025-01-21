@@ -66,8 +66,16 @@ class _TaskCardState extends State<TaskCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+    return Container(
+      margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xff182631),
+            width: 1.5,
+          ),
+        ),
+      ),
       child: Material(
         color: Colors.transparent,
         child: ListTile(

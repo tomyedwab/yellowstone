@@ -69,33 +69,41 @@ class _TemplatesPageState extends State<TemplatesPage> {
                 }
               },
               itemBuilder: (context, index) {
-          final template = templates[index];
-          return Card(
-            key: ValueKey(template.id),
-            margin: const EdgeInsets.all(8.0),
-            child: ListTile(
-              title: Text(template.title),
-              subtitle: Text('${template.taskIds.length} tasks'),
-              trailing: Chip(
-                label: Text(
-                  template.category.name,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                backgroundColor: Colors.blue,
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TaskListView(
-                      dataService: widget.dataService,
-                      taskListId: template.id,
+                final template = templates[index];
+                return Container(
+                  key: ValueKey(template.id),
+                  margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Color(0xff182631),
+                        width: 1.5,
+                      ),
                     ),
                   ),
+                  child: ListTile(
+                    title: Text(template.title),
+                    subtitle: Text('${template.taskIds.length} tasks'),
+                    trailing: Chip(
+                      label: Text(
+                        template.category.name,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      backgroundColor: Colors.blue,
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TaskListView(
+                            dataService: widget.dataService,
+                            taskListId: template.id,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
-              },
-            ),
-          );
               },
             ),
           ),
