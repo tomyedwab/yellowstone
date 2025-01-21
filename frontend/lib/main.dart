@@ -67,10 +67,10 @@ class YellowstoneApp extends StatelessWidget {
           color: Colors.transparent,
         ),
         textTheme: TextTheme(
-          bodyLarge: GoogleFonts.roboto(color: Color(0xfff6fbff)),
-          bodyMedium: GoogleFonts.roboto(color: Color(0xfff6fbff)),
-          bodySmall: GoogleFonts.roboto(color: Color(0xfff6fbff)),
-          titleMedium: GoogleFonts.roboto(color: Color(0xfff6fbff)),
+          bodyLarge: GoogleFonts.roboto(color: const Color(0xfff6fbff)),
+          bodyMedium: GoogleFonts.roboto(color: const Color(0xfff6fbff)),
+          bodySmall: GoogleFonts.roboto(color: const Color(0xfff6fbff)),
+          titleMedium: GoogleFonts.roboto(color: const Color(0xfff6fbff)),
         ),
         iconTheme: const IconThemeData(
           color: Color(0xfff6fbff),
@@ -107,7 +107,7 @@ class _RootPageState extends State<RootPage> {
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        indicatorColor: Color(0xff7faad0),
+        indicatorColor: const Color(0xff7faad0),
         onDestinationSelected: (int index) {
           setState(() {
             _selectedIndex = index;
