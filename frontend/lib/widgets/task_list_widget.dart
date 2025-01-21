@@ -70,11 +70,11 @@ class _TaskListWidgetState extends State<TaskListWidget> {
               ReorderableListView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                    onReorder: (oldIndex, newIndex) {
-                      widget.dataService.reorderTasks(
+                    onReorder: (oldIndex, newIndex) async {
+                      await widget.dataService.reorderTasks(
                         taskList.id,
-                        oldIndex,
-                        newIndex,
+                        taskList.taskIds[oldIndex],
+                        newIndex == 0 ? null : taskList.taskIds[newIndex - 1],
                       );
                     },
                     children: [

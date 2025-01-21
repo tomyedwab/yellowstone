@@ -29,13 +29,25 @@ func waitForEventId(w http.ResponseWriter, r *http.Request, eventState *events.E
 	return false
 }
 
-func HandleAPIResponse(w http.ResponseWriter, resp interface{}, err error) {
+func HandleAPIResponse(w http.ResponseWriter, r *http.Request, resp interface{}, err error) {
 	if err != nil {
+		fmt.Printf("%s - %s %s ERROR: %v\n",
+			r.RemoteAddr,
+			r.Method,
+			r.URL.Path,
+			err,
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json, err := json.Marshal(resp)
 	if err != nil {
+		fmt.Printf("%s - %s %s ERROR: %v\n",
+			r.RemoteAddr,
+			r.Method,
+			r.URL.Path,
+			err,
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -75,11 +87,11 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 
 			buf, err := io.ReadAll(r.Body)
 			if err != nil {
-				HandleAPIResponse(w, nil, err)
+				HandleAPIResponse(w, r, nil, err)
 			}
 			event, err := events.ParseEvent(buf, mapper)
 			if err != nil {
-				HandleAPIResponse(w, nil, err)
+				HandleAPIResponse(w, r, nil, err)
 			}
 
 			newEventId, err := db.CreateEvent(event, buf, clientId)
@@ -89,11 +101,11 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 			if err != nil {
 				// Special case for duplicate errors. We return a 200 in this case.
 				if duplicateErr, ok := err.(*DuplicateEventError); ok {
-					HandleAPIResponse(w, map[string]interface{}{"status": "duplicate", "id": duplicateErr.Id, "clientId": clientId}, nil)
+					HandleAPIResponse(w, r, map[string]interface{}{"status": "duplicate", "id": duplicateErr.Id, "clientId": clientId}, nil)
 					return
 				}
 			}
-			HandleAPIResponse(w, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
+			HandleAPIResponse(w, r, map[string]interface{}{"status": "success", "id": newEventId, "clientId": clientId}, err)
 		},
 	))
 
@@ -102,7 +114,7 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 			if !waitForEventId(w, r, eventState) {
 				return
 			}
-			HandleAPIResponse(w, map[string]interface{}{"id": eventState.CurrentEventId}, nil)
+			HandleAPIResponse(w, r, map[string]interface{}{"id": eventState.CurrentEventId}, nil)
 		},
 	))
 

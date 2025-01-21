@@ -199,7 +199,7 @@ func InitTaskHandlers(db *database.Database) {
 			}
 
 			resp, err := taskDBForList(db.GetDB(), listId)
-			database.HandleAPIResponse(w, resp, err)
+			database.HandleAPIResponse(w, r, resp, err)
 		},
 	))
 
@@ -218,7 +218,7 @@ func InitTaskHandlers(db *database.Database) {
 			}
 
 			resp, err := taskDBById(db.GetDB(), id)
-			database.HandleAPIResponse(w, resp, err)
+			database.HandleAPIResponse(w, r, resp, err)
 		},
 	))
 }

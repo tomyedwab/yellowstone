@@ -59,16 +59,16 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
           Expanded(
             child: ReorderableListView.builder(
               itemCount: taskLists.length,
-              onReorder: (oldIndex, newIndex) {
+              onReorder: (oldIndex, newIndex) async {
                 final movedList = _taskLists[oldIndex];
                 
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
-                  widget.dataService.reorderTaskLists(movedList.id, null);
+                  await widget.dataService.reorderTaskLists(movedList.id, null);
                 } else {
                   // Otherwise place after the item that's now at newIndex-1
                   final afterList = _taskLists[newIndex - 1];
-                  widget.dataService.reorderTaskLists(movedList.id, afterList.id);
+                  await widget.dataService.reorderTaskLists(movedList.id, afterList.id);
                 }
               },
               itemBuilder: (context, index) {

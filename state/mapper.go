@@ -82,6 +82,14 @@ func EventMapper(message *json.RawMessage, generic *events.GenericEvent) (events
 		}
 		return &event, nil
 
+	case "yellowstone:reorderTasks":
+		var event ReorderTasksEvent
+		err := json.Unmarshal(*message, &event)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing yellowstone:reorderTasks %d: %w", generic.Id, err)
+		}
+		return &event, nil
+
 	default:
 		return generic, nil
 	}

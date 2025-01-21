@@ -245,8 +245,13 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reorderTasks(int taskListId, int oldIndex, int newIndex) {
-    // TODO: Implement REST call
+  Future<void> reorderTasks(int taskListId, int oldTaskId, int? afterTaskId) async {
+    await doPublishRequest({
+      'type': 'yellowstone:reorderTasks',
+      'taskListId': taskListId,
+      'oldTaskId': oldTaskId,
+      'afterTaskId': afterTaskId,
+    });
     notifyListeners();
   }
 
@@ -259,7 +264,7 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reorderTaskLists(int taskListId, int? afterTaskListId) {
+  Future<void> reorderTaskLists(int taskListId, int? afterTaskListId) async {
     // TODO: Implement REST call
     notifyListeners();
   }
