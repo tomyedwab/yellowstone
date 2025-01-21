@@ -50,7 +50,6 @@ class _TemplatesPageState extends State<TemplatesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Templates'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Column(
         children: [

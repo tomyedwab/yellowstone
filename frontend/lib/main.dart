@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'pages/todo_lists_page.dart';
 import 'pages/templates_page.dart';
 import 'pages/archived_lists_page.dart';
@@ -38,8 +40,41 @@ class YellowstoneApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       title: 'Yellowstone',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xff111e2a),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xfff6fbff),
+          surface: Color(0xff111e2a),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xff111e2a),
+          surfaceTintColor: const Color(0xff111e2a),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Color(0xfff6fbff)),
+          titleTextStyle: GoogleFonts.archivo(
+            color: const Color(0xfff6fbff),
+            fontSize: 28,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        listTileTheme: const ListTileThemeData(
+          iconColor: Color(0xfff6fbff),
+          textColor: Color(0xfff6fbff),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Colors.transparent,
+        ),
+        textTheme: TextTheme(
+          bodyLarge: GoogleFonts.roboto(color: Color(0xfff6fbff)),
+          bodyMedium: GoogleFonts.roboto(color: Color(0xfff6fbff)),
+          bodySmall: GoogleFonts.roboto(color: Color(0xfff6fbff)),
+          titleMedium: GoogleFonts.roboto(color: Color(0xfff6fbff)),
+        ),
+        iconTheme: const IconThemeData(
+          color: Color(0xfff6fbff),
+        ),
       ),
       home: RootPage(dataService: _dataService),
     );
@@ -72,6 +107,7 @@ class _RootPageState extends State<RootPage> {
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: NavigationBar(
+        indicatorColor: Color(0xff7faad0),
         onDestinationSelected: (int index) {
           setState(() {
             _selectedIndex = index;

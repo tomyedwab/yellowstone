@@ -43,7 +43,6 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Login'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: WebViewWidget(controller: _controller),
     );

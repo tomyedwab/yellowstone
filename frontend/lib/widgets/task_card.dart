@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 import '../services/rest_data_service.dart';
+import 'task_options_sheet.dart';
 
 class TaskCard extends StatefulWidget {
   final RestDataService dataService;
@@ -65,134 +66,117 @@ class _TaskCardState extends State<TaskCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: _isEditing
+            ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _isEditing
-                      ? TextField(
-                          controller: _titleController,
-                          autofocus: true,
-                          onSubmitted: (_) => _saveTitle(),
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                          ),
-                        )
-                      : GestureDetector(
-                          onDoubleTap: () {
-                            if (widget.category != TaskListCategory.template) {
-                              setState(() => _isEditing = true);
-                            }
-                          },
-                          child: Text(
-                            widget.task.title,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  decoration: widget.task.isCompleted
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                ),
-                          ),
+                Row(
+                  children: [
+                      Expanded(
+                        child: TextField(
+                        controller: _titleController,
+                        autofocus: true,
+                        onSubmitted: (_) => _saveTitle(),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
                         ),
-                ),
-                if (_isEditing) ...[
-                  IconButton(
-                    icon: const Icon(Icons.check),
-                    onPressed: _saveTitle,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => setState(() => _isEditing = false),
-                  ),
-                ] else ...[
-                  if (widget.category != TaskListCategory.template) ...[
-                    IconButton(
-                      icon: Icon(
-                        widget.task.isCompleted
-                            ? Icons.check_circle
-                            : Icons.circle_outlined,
-                        color: widget.task.isCompleted ? Colors.green : Colors.grey,
                       ),
-                      onPressed: widget.onComplete,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: _selectDueDate,
-                    ),
-                    if (widget.task.dueDate != null)
+                    if (_isEditing) ...[
                       IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: _clearDueDate,
+                        icon: const Icon(Icons.check),
+                        onPressed: _saveTitle,
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Task'),
-                            content: const Text('Are you sure you want to delete this task?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('CANCEL'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  widget.dataService.deleteTask(
-                                    widget.task.taskListId,
-                                    widget.task.id,
-                                  );
-                                },
-                                child: const Text('DELETE'),
-                              ),
-                            ],
-                          ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _isEditing = false),
+                      ),
+                    ]
+                  ])
+              ],
+            )
+            : GestureDetector(
+                onTap: () => setState(() => _isEditing = true),
+                child: Text(
+                  widget.task.title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    decoration: widget.task.isCompleted
+                    ? TextDecoration.lineThrough
+                    : null,
+                  ),
+                ),
+            ),
+          subtitle: widget.task.completedAt != null ?
+            Text(
+                'Completed ${TaskCard._dateFormat.format(widget.task.completedAt!)}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              )
+            : widget.task.dueDate != null
+              ? Text(
+                  'Due ${TaskCard._dateFormat.format(widget.task.dueDate!)}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                )
+              : null,
+          leading: GestureDetector(
+            onTap: () {
+              if (widget.category != TaskListCategory.template) {
+                widget.onComplete?.call();
+              }
+            },
+            child: Container(
+              width: 36,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
+                ),
+              ),
+              child: widget.task.isCompleted
+                  ? const Icon(
+                    Icons.check,
+                    size: 16,
+                    color: Colors.white,
+                  )
+                  : null,
+            ),
+          ),
+          trailing: GestureDetector(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                builder: (context) => TaskOptionsSheet(
+                  task: widget.task,
+                  onDelete: () {
+                        Navigator.pop(context);
+                        widget.dataService.deleteTask(
+                          widget.task.taskListId,
+                          widget.task.id,
                         );
                       },
+                      onEditDueDate: _selectDueDate,
+                      onClearDueDate: _clearDueDate,
                     ),
-                  ] else if (widget.task.isCompleted) ...[
-                    const Icon(Icons.check_circle, color: Colors.green),
-                  ],
-                ],
-              ],
-            ),
-            if (widget.task.parentTaskId != null) ...[
-              const SizedBox(height: 4.0),
-              Text(
-                'Subtask of #${widget.task.parentTaskId}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-            if (widget.task.dueDate != null) ...[
-              const SizedBox(height: 8.0),
-              Text(
-                'Due: ${TaskCard._dateFormat.format(widget.task.dueDate!)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-            if (widget.task.comments.isNotEmpty) ...[
-              const SizedBox(height: 8.0),
-              const Text('Comments:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...widget.task.comments.map((comment) => Padding(
-                    padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                    child: Text('• $comment'),
-                  )),
-            ],
-            if (widget.task.completedAt != null) ...[
-              const SizedBox(height: 8.0),
-              Text(
-                'Completed: ${TaskCard._dateFormat.format(widget.task.completedAt!)}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ],
+                  );
+            },
+            child: const Icon(Icons.more_vert),
+          ),
         ),
       ),
     );

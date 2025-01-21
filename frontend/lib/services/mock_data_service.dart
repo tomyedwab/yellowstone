@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
-import 'package:intl/intl.dart';
 
 class MockDataService extends ChangeNotifier {
   static final MockDataService _instance = MockDataService._internal();

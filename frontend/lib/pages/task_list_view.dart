@@ -64,7 +64,59 @@ class _TaskListViewState extends State<TaskListView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(taskList.title),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Rename List'),
+                  content: TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter new title',
+                    ),
+                    onSubmitted: (value) {
+                      if (value.isNotEmpty) {
+                        widget.dataService.updateTaskListTitle(
+                          taskList.id,
+                          value,
+                        );
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('CANCEL'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(taskList.archived ? Icons.unarchive : Icons.archive),
+            onPressed: () {
+              if (taskList.archived) {
+                widget.dataService.unarchiveTaskList(taskList.id);
+                // TODO: Navigate to Lists page
+              } else {
+                widget.dataService.archiveTaskList(taskList.id);
+                // TODO: Navigate to ArchivedListsPage
+              }
+            },
+          ),
+          Chip(
+            label: Text(
+              taskList.category.name,
+              style: const TextStyle(color: Colors.black),
+            ),
+            backgroundColor: const Color(0xff7faad0)
+          )
+        ],
       ),
       body: SingleChildScrollView(
         child: TaskListWidget(

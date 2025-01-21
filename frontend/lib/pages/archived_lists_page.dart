@@ -50,7 +50,6 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Archived Lists'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: ListView.builder(
         itemCount: taskLists.length,

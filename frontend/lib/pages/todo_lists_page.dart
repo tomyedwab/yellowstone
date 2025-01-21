@@ -53,7 +53,6 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Active Lists'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Column(
         children: [
