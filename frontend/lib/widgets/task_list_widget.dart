@@ -73,20 +73,19 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     onReorder: (oldIndex, newIndex) async {
                       await widget.dataService.reorderTasks(
                         taskList.id,
-                        taskList.taskIds[oldIndex],
-                        newIndex == 0 ? null : taskList.taskIds[newIndex - 1],
+                        _tasks[oldIndex].id,
+                        newIndex == 0 ? null : _tasks[newIndex - 1].id,
                       );
                     },
                     children: [
-                      for (final taskId in taskList.taskIds)
+                      for (final task in _tasks)
                         KeyedSubtree(
-                          key: ValueKey(taskId),
+                          key: ValueKey(task.id),
                           child: TaskCard(
                             dataService: widget.dataService,
-                            task: _tasks.firstWhere((t) => t.id == taskId),
+                            task: task,
                             category: taskList.category,
                             onComplete: () {
-                              final task = _tasks.firstWhere((t) => t.id == taskId);
                               widget.dataService.markTaskComplete(
                                 task.id,
                                 !task.isCompleted,

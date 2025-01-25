@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_cookie_jar/webview_cookie_jar.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 
 typedef LoginRedirectHandler = void Function(String loginUrl);
+
+typedef InFlightRequest = (String clientId, Map<String, Object?> event);
 
 class RestDataService extends ChangeNotifier {
   static String get baseUrl {
@@ -41,6 +44,9 @@ class RestDataService extends ChangeNotifier {
   int _currentEventId = 0;
   bool _isPolling = false;
   bool get isPolling => _isPolling;
+
+  // Chronologically ordered list of <clientId, event> tuples
+  final List<InFlightRequest> _inFlightRequests = [];
 
   // Cache storage
   final Map<String, String> _responseCache = {};
@@ -95,6 +101,9 @@ class RestDataService extends ChangeNotifier {
 
   Future<http.StreamedResponse> doPublishRequest(Map<String, Object?> event) async {
     final clientId = _generateClientId();
+    _inFlightRequests.add((clientId, event));
+    notifyListeners();
+
     final request = http.Request('POST', Uri.parse('$baseUrl/publish?cid=$clientId'))
       ..followRedirects = false
       ..maxRedirects = 0;
@@ -109,6 +118,7 @@ class RestDataService extends ChangeNotifier {
     event['timestamp'] = DateTime.now().toUtc().toIso8601String();
     request.body = json.encode(event);
     final response = await http.Client().send(request);
+    _inFlightRequests.removeWhere((request) => request.$1 == clientId);
     if (response.statusCode != 200) {
       throw Exception('Failed to publish event');
     }
@@ -146,6 +156,19 @@ class RestDataService extends ChangeNotifier {
     
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> taskLists = data['TaskLists'];
+
+    final inFlightReorderedTaskLists = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:reorderTaskList');
+    for (final inFlightRequest in inFlightReorderedTaskLists) {
+      final oldTaskListId = inFlightRequest.$2['listId'];
+      final afterTaskListId = inFlightRequest.$2['afterListId'];
+      final oldTaskListIndex = taskLists.indexWhere((taskList) => taskList['Id'] == oldTaskListId);
+      final afterTaskListIndex = taskLists.indexWhere((taskList) => taskList['Id'] == afterTaskListId);
+      if (oldTaskListIndex != -1) {
+        final taskList = taskLists[oldTaskListIndex];
+        taskLists.removeAt(oldTaskListIndex);
+        taskLists.insert(afterTaskListIndex+1, taskList);
+      }
+    }
       
     return taskLists.map((json) => TaskList(
       id: json['Id'],
@@ -235,15 +258,44 @@ class RestDataService extends ChangeNotifier {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final List<dynamic> tasksData = data['Tasks'];
-      
+
+      final inFlightCompletedTasks = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:updateTaskCompleted');
+      final inFlightRenamedTasks = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:updateTaskTitle');
+      final inFlightReorderedTasks = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:reorderTasks' && request.$2['taskListId'] == taskListId);
+
+      for (final inFlightRequest in inFlightReorderedTasks) {
+        final oldTaskId = inFlightRequest.$2['oldTaskId'];
+        final afterTaskId = inFlightRequest.$2['afterTaskId'];
+        // Reorder the tasks in tasksData
+        final oldTaskIndex = tasksData.indexWhere((task) => task['Id'] == oldTaskId);
+        final afterTaskIndex = tasksData.indexWhere((task) => task['Id'] == afterTaskId);
+        if (oldTaskIndex != -1) {
+          final taskData = tasksData[oldTaskIndex];
+          tasksData.removeAt(oldTaskIndex);
+          tasksData.insert(afterTaskIndex+1, taskData);
+        }
+      }
+
       final tasks = tasksData.map((taskData) {
+        var title = taskData['Title'];
+        for (final inFlightRequest in inFlightRenamedTasks) {
+          if (inFlightRequest.$2['taskId'] == taskData['Id']) {
+            title = inFlightRequest.$2['title'];
+          }
+        }
+        var completedAt = taskData['CompletedAt'];
+        for (final inFlightRequest in inFlightCompletedTasks) {
+          if (inFlightRequest.$2['taskId'] == taskData['Id']) {
+            completedAt = inFlightRequest.$2['completedAt'];
+          }
+        }
         final task = Task(
           id: taskData['Id'],
-          title: taskData['Title'],
+          title: title,
           taskListId: taskListId,
           dueDate: taskData['DueDate'] != null ? DateTime.parse(taskData['DueDate']) : null,
-          isCompleted: taskData['CompletedAt'] != null,
-          completedAt: taskData['CompletedAt'] != null ? DateTime.parse(taskData['CompletedAt']) : null,
+          isCompleted: completedAt != null,
+          completedAt: completedAt != null ? DateTime.parse(completedAt) : null,
         );
         _tasks[task.id] = task;
         return task;
@@ -261,7 +313,6 @@ class RestDataService extends ChangeNotifier {
       'taskId': taskId,
       'title': title,
     });
-    notifyListeners();
   }
 
   Future<void> updateTaskDueDate(int taskId, DateTime? dueDate) async {
@@ -270,7 +321,6 @@ class RestDataService extends ChangeNotifier {
       'taskId': taskId,
       'dueDate': dueDate?.toUtc().toIso8601String(),
     });
-    notifyListeners();
   }
 
   Future<void> deleteTask(int taskListId, int taskId) async {
@@ -278,7 +328,6 @@ class RestDataService extends ChangeNotifier {
       'type': 'yellowstone:deleteTask',
       'taskId': taskId,
     });
-    notifyListeners();
   }
 
   Future<void> createTask(int taskListId, String title) async {
@@ -288,7 +337,6 @@ class RestDataService extends ChangeNotifier {
       'taskListId': taskListId,
       'dueDate': null,
     });
-    notifyListeners();
   }
 
   Future<void> reorderTasks(int taskListId, int oldTaskId, int? afterTaskId) async {
@@ -299,17 +347,14 @@ class RestDataService extends ChangeNotifier {
       'oldTaskId': oldTaskId,
       'afterTaskId': afterTaskId,
     });
-    notifyListeners();
   }
 
   Future<void> markTaskComplete(int taskId, bool complete) async {
-    // TODO: While the event is pending, apply the completion locally
     await doPublishRequest({
       'type': 'yellowstone:updateTaskCompleted',
       'taskId': taskId,
       'completedAt': complete ? DateTime.now().toUtc().toIso8601String() : null,
     });
-    notifyListeners();
   }
 
   Future<void> reorderTaskList(int taskListId, int? afterTaskListId) async {
@@ -319,7 +364,6 @@ class RestDataService extends ChangeNotifier {
       'listId': taskListId,
       'afterListId': afterTaskListId,
     });
-    notifyListeners();
   }
 
   Future<void> archiveTaskList(int taskListId) async {
@@ -328,7 +372,6 @@ class RestDataService extends ChangeNotifier {
       'listId': taskListId,
       'archived': true,
     });
-    notifyListeners();
   }
 
   Future<void> unarchiveTaskList(int taskListId) async {
@@ -337,7 +380,6 @@ class RestDataService extends ChangeNotifier {
       'listId': taskListId,
       'archived': false,
     });
-    notifyListeners();
   }
 
   Future<void> createTaskList(String title, TaskListCategory category) async {
@@ -347,7 +389,6 @@ class RestDataService extends ChangeNotifier {
       'category': category.name.toLowerCase(),
       'archived': false,
     });
-    notifyListeners();
   }
 
   Future<void> updateTaskListTitle(int taskListId, String title) async {
@@ -356,7 +397,6 @@ class RestDataService extends ChangeNotifier {
       'listId': taskListId,
       'title': title,
     });
-    notifyListeners();
   }
 
   Future<void> startPolling() async {
