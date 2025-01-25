@@ -38,8 +38,44 @@ class RestDataService extends ChangeNotifier {
     return _instance;
   }
   
+  int _currentEventId = 0;
+  bool _isPolling = false;
+  bool get isPolling => _isPolling;
+
+  // Cache storage
+  final Map<String, String> _responseCache = {};
+  int _lastCacheEventId = 0;
+
+  void _clearCacheIfEventChanged() {
+    if (_lastCacheEventId != _currentEventId) {
+      _responseCache.clear();
+      _lastCacheEventId = _currentEventId;
+    }
+  }
+
+  Future<http.Response> _getCachedResponse(String url) async {
+    _clearCacheIfEventChanged();
+    
+    final cachedResponse = _responseCache[url];
+    if (cachedResponse != null) {
+      return http.Response(cachedResponse, 200);
+    }
+
+    final streamedResponse = await http.Client().send(await createGetRequest(url));
+    final response = await http.Response.fromStream(streamedResponse);
+    _handleResponse(response);
+
+    if (response.statusCode == 200) {
+      _responseCache[url] = response.body;
+    }
+    
+    return response;
+  }
+
   RestDataService._internal() {
     _random = Random();
+    // Start polling automatically
+    startPolling();
   }
 
   // Utility function to create a request for a url without following redirects
@@ -101,11 +137,9 @@ class RestDataService extends ChangeNotifier {
     return List.generate(16, (_) => _random.nextInt(16).toRadixString(16)).join();
   }
 
-  // Mock implementations for now
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
-    final streamedResponse = await http.Client().send(await createGetRequest('$baseUrl/tasklist/all'));
-    final response = await http.Response.fromStream(streamedResponse);
-    _handleResponse(response);
+    final response = await _getCachedResponse('$baseUrl/tasklist/all');
+    
     if (response.statusCode != 200) {
       throw Exception('Failed to load task lists');
     }
@@ -122,9 +156,8 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<List<TaskListMetadata>> getTaskListMetadata() async {
-    final streamedResponse = await http.Client().send(await createGetRequest('$baseUrl/tasklist/metadata'));
-    final response = await http.Response.fromStream(streamedResponse);
-    _handleResponse(response);
+    final response = await _getCachedResponse('$baseUrl/tasklist/metadata');
+    
     if (response.statusCode != 200) {
       throw Exception('Failed to load task list metadata');
     }
@@ -145,21 +178,19 @@ class RestDataService extends ChangeNotifier {
       default:
         throw Exception('Unknown category: $category');
     }
-  }
+    }
 
   Future<TaskList> getTaskListById(int taskListId) async {
     // Get the task list details
-    final listStreamedResponse = await http.Client().send(await createGetRequest('$baseUrl/tasklist/get?id=$taskListId'));
-    final listResponse = await http.Response.fromStream(listStreamedResponse);
-    _handleResponse(listResponse);
+    final listResponse = await _getCachedResponse('$baseUrl/tasklist/get?id=$taskListId');
+    
     if (listResponse.statusCode != 200) {
       throw Exception('Failed to load task list: ${listResponse.body}');
     }
 
     // Get the tasks for this list
-    final tasksStreamedResponse = await http.Client().send(await createGetRequest('$baseUrl/task/list?listId=$taskListId'));
-    final tasksResponse = await http.Response.fromStream(tasksStreamedResponse);
-    _handleResponse(tasksResponse);
+    final tasksResponse = await _getCachedResponse('$baseUrl/task/list?listId=$taskListId');
+    
     if (tasksResponse.statusCode != 200) {
       throw Exception('Failed to load tasks: ${tasksResponse.body}');
     }
@@ -199,9 +230,8 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<List<Task>> getTasksForList(int taskListId) async {
-    final streamedResponse = await http.Client().send(await createGetRequest('$baseUrl/task/list?listId=$taskListId'));
-    final response = await http.Response.fromStream(streamedResponse);
-    _handleResponse(response);
+    final response = await _getCachedResponse('$baseUrl/task/list?listId=$taskListId');
+    
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final List<dynamic> tasksData = data['Tasks'];
@@ -327,5 +357,38 @@ class RestDataService extends ChangeNotifier {
       'title': title,
     });
     notifyListeners();
+  }
+
+  Future<void> startPolling() async {
+    if (_isPolling) return;
+    _isPolling = true;
+    _pollForEvents();
+  }
+
+  void stopPolling() {
+    _isPolling = false;
+  }
+
+  Future<void> _pollForEvents() async {
+    while (_isPolling) {
+      try {
+        final streamedResponse = await http.Client().send(
+          await createGetRequest('$baseUrl/poll?e=${_currentEventId + 1}')
+        );
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          _currentEventId = data['id'];
+          notifyListeners();
+        } else if (response.statusCode != 304) {
+          // If not a "Not Modified" response, wait a bit before retrying
+          await Future.delayed(const Duration(seconds: 1));
+        }
+      } catch (e) {
+        // On error, wait a bit before retrying
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    }
   }
 }
