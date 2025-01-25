@@ -19,3 +19,15 @@ class TaskList {
     this.archived = false,
   });
 }
+
+class TaskListMetadata {
+  final int id;
+  final int total;
+  final int completed;
+
+  TaskListMetadata({
+    required this.id,
+    required this.total,
+    required this.completed,
+  });
+}

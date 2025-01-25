@@ -206,7 +206,7 @@ class MockDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reorderTaskLists(int taskListId, int? afterTaskListId) {
+  void reorderTaskList(int taskListId, int? afterTaskListId) {
     // Find and remove the task list to move
     final taskListIndex = _taskLists.indexWhere((list) => list.id == taskListId);
     if (taskListIndex == -1) throw Exception('TaskList not found');

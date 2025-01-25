@@ -70,6 +70,7 @@ class RestDataService extends ChangeNotifier {
       request.headers['X-CloudFront-Secret'] = '123';
     }
     request.headers['Content-Type'] = 'application/json';
+    event['timestamp'] = DateTime.now().toUtc().toIso8601String();
     request.body = json.encode(event);
     final response = await http.Client().send(request);
     if (response.statusCode != 200) {
@@ -117,6 +118,21 @@ class RestDataService extends ChangeNotifier {
       title: json['Title'],
       category: _categoryFromString(json['Category']),
       archived: json['Archived'],
+    )).toList();
+  }
+
+  Future<List<TaskListMetadata>> getTaskListMetadata() async {
+    final streamedResponse = await http.Client().send(await createGetRequest('$baseUrl/tasklist/metadata'));
+    final response = await http.Response.fromStream(streamedResponse);
+    _handleResponse(response);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load task list metadata');
+    }
+    final List<dynamic> data = json.decode(response.body);
+    return data.map((json) => TaskListMetadata(
+      id: json['ListId'],
+      total: json['Total'],
+      completed: json['Completed'],
     )).toList();
   }
 
@@ -246,6 +262,7 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<void> reorderTasks(int taskListId, int oldTaskId, int? afterTaskId) async {
+    // TODO: While the event is pending, apply the reordering locally
     await doPublishRequest({
       'type': 'yellowstone:reorderTasks',
       'taskListId': taskListId,
@@ -256,6 +273,7 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<void> markTaskComplete(int taskId, bool complete) async {
+    // TODO: While the event is pending, apply the completion locally
     await doPublishRequest({
       'type': 'yellowstone:updateTaskCompleted',
       'taskId': taskId,
@@ -264,8 +282,13 @@ class RestDataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> reorderTaskLists(int taskListId, int? afterTaskListId) async {
-    // TODO: Implement REST call
+  Future<void> reorderTaskList(int taskListId, int? afterTaskListId) async {
+    // TODO: While the event is pending, apply the reordering locally
+    await doPublishRequest({
+      'type': 'yellowstone:reorderTaskList',
+      'listId': taskListId,
+      'afterListId': afterTaskListId,
+    });
     notifyListeners();
   }
 

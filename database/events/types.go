@@ -1,6 +1,9 @@
 package events
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Event interface {
 	GetId() int
@@ -17,6 +20,8 @@ type GenericEvent struct {
 	Id int `json:"id"`
 	// The event type
 	Type string `json:"type"`
+	// The event timestamp
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func (e GenericEvent) GetId() int {
@@ -29,6 +34,10 @@ func (e *GenericEvent) SetId(id int) {
 
 func (e *GenericEvent) GetType() string {
 	return e.Type
+}
+
+func (e *GenericEvent) GetTimestamp() time.Time {
+	return e.Timestamp
 }
 
 type DBInitEvent struct {

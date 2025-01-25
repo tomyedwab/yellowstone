@@ -16,6 +16,7 @@ class ToDoListsPage extends StatefulWidget {
 
 class _ToDoListsPageState extends State<ToDoListsPage> {
   List<TaskList> _taskLists = [];
+  Map<int, TaskListMetadata> _taskListMetadata = {};
 
   @override
   void initState() {
@@ -37,8 +38,10 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
   Future<void> _loadTaskLists() async {
     try {
       final lists = await widget.dataService.getTaskLists();
+      final metadata = await widget.dataService.getTaskListMetadata();
       setState(() {
         _taskLists = lists.where((list) => list.category == TaskListCategory.toDoList && !list.archived).toList();
+        _taskListMetadata = Map.fromEntries(metadata.map((m) => MapEntry(m.id, m)));
       });
     } catch (e) {
       // TODO: Handle error
@@ -64,11 +67,11 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                 
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
-                  await widget.dataService.reorderTaskLists(movedList.id, null);
+                  await widget.dataService.reorderTaskList(movedList.id, null);
                 } else {
                   // Otherwise place after the item that's now at newIndex-1
                   final afterList = _taskLists[newIndex - 1];
-                  await widget.dataService.reorderTaskLists(movedList.id, afterList.id);
+                  await widget.dataService.reorderTaskList(movedList.id, afterList.id);
                 }
               },
               itemBuilder: (context, index) {
@@ -86,7 +89,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                   ),
                   child: ListTile(
                     title: Text(taskList.title),
-                    subtitle: Text('${taskList.taskIds.length} tasks'),
+                    subtitle: Text('${_taskListMetadata[taskList.id]?.completed ?? 0} / ${_taskListMetadata[taskList.id]?.total ?? 0} tasks'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

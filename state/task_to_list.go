@@ -111,8 +111,28 @@ WHERE ttl.list_id = $1
 ORDER BY ttl.position;
 `
 
+// Returns the number of total & completed tasks for every list
+const getTaskMetadataV1Sql = `
+SELECT list_id, COUNT(*) AS total, SUM(CASE WHEN task_v1.completed_at IS NOT NULL THEN 1 ELSE 0 END) AS completed
+FROM task_to_list_v1
+LEFT JOIN task_v1 ON task_to_list_v1.task_id = task_v1.id
+GROUP BY list_id;
+`
+
+type TaskListMetadataV1 struct {
+	ListId    int `db:"list_id"`
+	Total     int `db:"total"`
+	Completed int `db:"completed"`
+}
+
 func taskDBForList(db *sqlx.DB, listId int) (TaskV1Response, error) {
 	var tasks []TaskV1 = make([]TaskV1, 0)
 	err := db.Select(&tasks, getTasksForListV1Sql, listId)
 	return TaskV1Response{Tasks: tasks}, err
+}
+
+func taskListDBMetadata(db *sqlx.DB) ([]TaskListMetadataV1, error) {
+	var metadata []TaskListMetadataV1 = make([]TaskListMetadataV1, 0)
+	err := db.Select(&metadata, getTaskMetadataV1Sql)
+	return metadata, err
 }

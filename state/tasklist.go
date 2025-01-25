@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS task_list_v1 (
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     title TEXT NOT NULL,
     category TEXT NOT NULL,
-    archived BOOLEAN NOT NULL
+    archived BOOLEAN NOT NULL,
+	position INTEGER NOT NULL
 );
 `
 
@@ -47,11 +48,18 @@ type UpdateTaskListArchivedEvent struct {
 	Archived bool `db:"archived"`
 }
 
+type ReorderTaskListEvent struct {
+	events.GenericEvent
+
+	ListId      int  `db:"list_id"`
+	AfterListId *int `db:"after_list_id"`
+}
+
 // Event handler
 
 const insertTaskListV1Sql = `
-INSERT INTO task_list_v1 (title, category, archived)
-VALUES (:title, :category, :archived);
+INSERT INTO task_list_v1 (title, category, archived, position)
+VALUES (:title, :category, :archived, (SELECT IFNULL(MAX(position), 0) + 1 FROM task_list_v1));
 `
 
 const updateTaskListTitleV1Sql = `
@@ -64,6 +72,29 @@ const updateTaskListArchivedV1Sql = `
 UPDATE task_list_v1
 SET archived = :archived
 WHERE id = :list_id;
+`
+
+const reorderTaskListV1Sql = `
+WITH old_list AS (
+  SELECT position FROM task_list_v1 WHERE id = :list_id
+), new_list AS (
+  SELECT position + 1 AS position FROM task_list_v1 WHERE id = :after_list_id
+)
+UPDATE task_list_v1
+SET position = CASE 
+  WHEN position = (SELECT position FROM old_list) THEN (SELECT position FROM new_list)
+  WHEN position > (SELECT position FROM old_list) AND position < (SELECT position FROM new_list) THEN position - 1
+  WHEN position < (SELECT position FROM old_list) AND position >= (SELECT position FROM new_list) THEN position + 1
+  ELSE position
+END
+`
+
+const reorderTaskListToFrontV1Sql = `
+UPDATE task_list_v1
+SET position = CASE 
+  WHEN id = :list_id THEN 1
+  ELSE position + 1
+END
 `
 
 func TaskListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
@@ -96,6 +127,21 @@ func TaskListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 			*evt,
 		)
 		return true, err
+
+	case *ReorderTaskListEvent:
+		fmt.Printf("TaskList v1: ReorderTaskListEvent %d %d\n", evt.ListId, evt.AfterListId)
+		if evt.AfterListId == nil {
+			_, err := tx.NamedExec(
+				reorderTaskListToFrontV1Sql,
+				*evt,
+			)
+			return true, err
+		}
+		_, err := tx.NamedExec(
+			reorderTaskListV1Sql,
+			*evt,
+		)
+		return true, err
 	}
 	return false, nil
 }
@@ -103,15 +149,15 @@ func TaskListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 // State queries
 
 const getAllTaskListsV1Sql = `
-SELECT id, title, category, archived FROM task_list_v1;
+SELECT id, title, category, archived FROM task_list_v1 ORDER BY position;
 `
 
 const getCategoryTaskListsV1Sql = `
-SELECT id, title, category, archived FROM task_list_v1 WHERE archived = false AND category = $1;
+SELECT id, title, category, archived FROM task_list_v1 WHERE archived = false AND category = $1 ORDER BY position;
 `
 
 const getArchivedTaskListsV1Sql = `
-SELECT id, title, category, archived FROM task_list_v1 WHERE archived = true;
+SELECT id, title, category, archived FROM task_list_v1 WHERE archived = true ORDER BY position;
 `
 
 const getTaskListByIdV1Sql = `
@@ -202,6 +248,13 @@ func InitTaskListHandlers(db *database.Database) {
 	http.HandleFunc("/api/tasklist/archived", middleware.ApplyDefault(
 		func(w http.ResponseWriter, r *http.Request) {
 			resp, err := taskListDBArchived(db.GetDB())
+			database.HandleAPIResponse(w, r, resp, err)
+		},
+	))
+
+	http.HandleFunc("/api/tasklist/metadata", middleware.ApplyDefault(
+		func(w http.ResponseWriter, r *http.Request) {
+			resp, err := taskListDBMetadata(db.GetDB())
 			database.HandleAPIResponse(w, r, resp, err)
 		},
 	))

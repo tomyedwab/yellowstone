@@ -61,11 +61,11 @@ class _TemplatesPageState extends State<TemplatesPage> {
                 
                 // If newIndex is 0, place at start
                 if (newIndex == 0) {
-                  widget.dataService.reorderTaskLists(movedList.id, null);
+                  widget.dataService.reorderTaskList(movedList.id, null);
                 } else {
                   // Otherwise place after the item that's now at newIndex-1
                   final afterList = _taskLists[newIndex - 1];
-                  widget.dataService.reorderTaskLists(movedList.id, afterList.id);
+                  widget.dataService.reorderTaskList(movedList.id, afterList.id);
                 }
               },
               itemBuilder: (context, index) {
