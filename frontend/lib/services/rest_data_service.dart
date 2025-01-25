@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:webview_cookie_jar/webview_cookie_jar.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
+import '../models/task_history.dart';
 
 typedef LoginRedirectHandler = void Function(String loginUrl);
 
@@ -396,6 +397,27 @@ class RestDataService extends ChangeNotifier {
       'type': 'yellowstone:updateTaskListTitle',
       'listId': taskListId,
       'title': title,
+    });
+  }
+
+  Future<List<TaskHistory>> getTaskHistory(int taskId) async {
+    final response = await _getCachedResponse('$baseUrl/task/history?id=$taskId');
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load task history');
+    }
+    
+    final Map<String, dynamic> data = json.decode(response.body);
+    final List<dynamic> history = data['history'];
+    
+    return history.map((json) => TaskHistory.fromJson(json)).toList();
+  }
+
+  Future<void> addTaskComment(int taskId, String comment) async {
+    await doPublishRequest({
+      'type': 'yellowstone:addTaskComment',
+      'taskId': taskId,
+      'userComment': comment,
     });
   }
 

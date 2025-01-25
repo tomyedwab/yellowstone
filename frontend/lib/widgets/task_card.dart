@@ -4,12 +4,15 @@ import '../models/task.dart';
 import '../models/task_list.dart';
 import '../services/rest_data_service.dart';
 import 'task_options_sheet.dart';
+import '../pages/task_history_page.dart';
 
 class TaskCard extends StatefulWidget {
   final RestDataService dataService;
   final Task task;
   final TaskListCategory category;
   final VoidCallback? onComplete;
+  final VoidCallback? onReorder;
+  final bool isDragging;
   static final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
   const TaskCard({
@@ -18,6 +21,8 @@ class TaskCard extends StatefulWidget {
     required this.task,
     required this.category,
     this.onComplete,
+    this.onReorder,
+    this.isDragging = false,
   });
 
   @override
@@ -165,25 +170,42 @@ class _TaskCardState extends State<TaskCard> {
                   : null,
             ),
           ),
-          trailing: GestureDetector(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                builder: (context) => TaskOptionsSheet(
-                  task: widget.task,
-                  onDelete: () {
-                      Navigator.pop(context);
-                      widget.dataService.deleteTask(
-                        widget.task.taskListId,
-                        widget.task.id,
-                      );
-                    },
-                    onEditDueDate: _selectDueDate,
-                    onClearDueDate: _clearDueDate,
-                  ),
-                );
-            },
-            child: const Icon(Icons.more_vert),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.history),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TaskHistoryPage(task: widget.task),
+                    ),
+                  );
+                },
+                tooltip: 'View history',
+              ),
+              GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (context) => TaskOptionsSheet(
+                      task: widget.task,
+                      onDelete: () {
+                        Navigator.pop(context);
+                        widget.dataService.deleteTask(
+                          widget.task.taskListId,
+                          widget.task.id,
+                        );
+                      },
+                      onEditDueDate: _selectDueDate,
+                      onClearDueDate: _clearDueDate,
+                    ),
+                  );
+                },
+                child: const Icon(Icons.more_vert),
+              ),
+            ],
           ),
         ),
       ),

@@ -221,4 +221,23 @@ func InitTaskHandlers(db *database.Database) {
 			database.HandleAPIResponse(w, r, resp, err)
 		},
 	))
+
+	http.HandleFunc("/api/task/history", middleware.ApplyDefault(
+		func(w http.ResponseWriter, r *http.Request) {
+			idStr := r.URL.Query().Get("id")
+			if idStr == "" {
+				http.Error(w, "Missing id parameter", http.StatusBadRequest)
+				return
+			}
+
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+				return
+			}
+
+			resp, err := taskHistoryDBForTask(db.GetDB(), id)
+			database.HandleAPIResponse(w, r, resp, err)
+		},
+	))
 }
