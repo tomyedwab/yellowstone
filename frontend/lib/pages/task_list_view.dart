@@ -127,7 +127,6 @@ class _TaskListViewState extends State<TaskListView> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(taskList.title),
         actions: [
           if (_isSelectionMode) ...[
             IconButton(
@@ -191,13 +190,6 @@ class _TaskListViewState extends State<TaskListView> {
                 }
               },
             ),
-            Chip(
-              label: Text(
-                taskList.category.name,
-                style: const TextStyle(color: Colors.black),
-              ),
-              backgroundColor: const Color(0xff7faad0)
-            )
           ],
         ],
       ),

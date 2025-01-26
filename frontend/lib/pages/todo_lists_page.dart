@@ -93,15 +93,6 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Chip(
-                          label: Text(
-                            taskList.category.name,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          backgroundColor: taskList.category == TaskListCategory.template
-                              ? Colors.blue
-                              : Colors.green,
-                        ),
                         IconButton(
                           icon: const Icon(Icons.archive),
                           onPressed: () {

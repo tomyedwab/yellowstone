@@ -73,6 +73,13 @@ class _TaskListWidgetState extends State<TaskListWidget> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                taskList.title,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
             if (_tasks.isEmpty) 
               const Center(child: CircularProgressIndicator())
             else if (widget.isSelectionMode)

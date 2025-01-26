@@ -354,7 +354,6 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<void> reorderTasks(int taskListId, int oldTaskId, int? afterTaskId) async {
-    // TODO: While the event is pending, apply the reordering locally
     await doPublishRequest({
       'type': 'yellowstone:reorderTasks',
       'taskListId': taskListId,
@@ -372,7 +371,6 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<void> reorderTaskList(int taskListId, int? afterTaskListId) async {
-    // TODO: While the event is pending, apply the reordering locally
     await doPublishRequest({
       'type': 'yellowstone:reorderTaskList',
       'listId': taskListId,

@@ -87,13 +87,6 @@ class _TemplatesPageState extends State<TemplatesPage> {
                   child: ListTile(
                     title: Text(template.title),
                     subtitle: Text('${_taskListMetadata[template.id]?.total ?? 0} tasks'),
-                    trailing: Chip(
-                      label: Text(
-                        template.category.name,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      backgroundColor: Colors.blue,
-                    ),
                     onTap: () {
                       Navigator.push(
                         context,
