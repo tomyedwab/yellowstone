@@ -18,7 +18,7 @@ func waitForEventId(w http.ResponseWriter, r *http.Request, eventState *events.E
 		http.Error(w, fmt.Sprintf("Invalid event ID %s", eventIdStr), http.StatusBadRequest)
 		return false
 	}
-	// Wait for up to 60 seconds while polling eventState.CurrentEventId
+	// Wait for up to 50 seconds while polling eventState.CurrentEventId
 	// to see if we have caught up to the requested event ID
 	if eventState.PollForEventId(eventId) {
 		return true

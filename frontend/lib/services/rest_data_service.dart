@@ -452,6 +452,7 @@ class RestDataService extends ChangeNotifier {
           await createGetRequest('$baseUrl/poll?e=${_currentEventId + 1}')
         );
         final response = await http.Response.fromStream(streamedResponse);
+        _handleResponse(response);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);

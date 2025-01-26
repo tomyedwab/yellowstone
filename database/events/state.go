@@ -66,7 +66,7 @@ func (state *EventState) PollForEventId(eventId int) bool {
 
 	timeoutCh := make(chan bool)
 	go func() {
-		time.Sleep(60 * time.Second)
+		time.Sleep(50 * time.Second)
 		timeoutCh <- true
 		close(timeoutCh)
 	}()
