@@ -14,6 +14,7 @@ func main() {
 		"task_list_v1":    state.TaskListDBHandleEvent,
 		"task_v1":         state.TaskDBHandleEvent,
 		"task_to_list_v1": state.TaskToListDBHandleEvent,
+		"task_history_v1": state.TaskHistoryDBHandleEvent,
 	})
 	if err != nil {
 		panic(err)
