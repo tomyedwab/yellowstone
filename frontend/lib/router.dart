@@ -6,6 +6,7 @@ import 'pages/task_list_view.dart';
 import 'pages/task_history_page.dart';
 import 'pages/templates_page.dart';
 import 'pages/archived_lists_page.dart';
+import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
 
 List<GoRoute> createSubRoutes(RestDataService dataService, int selectedIndex, Widget Function(int?) mainPage, String taskListPrefix) {
@@ -84,6 +85,15 @@ GoRouter createRouter(RestDataService dataService) {
           ],
         ),
         routes: createSubRoutes(dataService, 2, (selectedListId) => ArchivedListsPage(dataService: dataService, selectedListId: selectedListId), '/archived/'),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => LoginPage(
+          loginUrl: state.uri.queryParameters['loginUrl']!,
+          onLoginSuccess: () {
+            context.go('/');
+          },
+        ),
       ),
     ],
   );

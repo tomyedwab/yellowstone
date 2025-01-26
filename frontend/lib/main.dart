@@ -1,13 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
-import 'pages/todo_lists_page.dart';
-import 'pages/templates_page.dart';
-import 'pages/archived_lists_page.dart';
-import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
 import 'router.dart';
 
@@ -23,18 +18,7 @@ class YellowstoneApp extends StatelessWidget {
   YellowstoneApp({super.key}) {
     _router = createRouter(_dataService);
     _dataService.setLoginRedirectHandler((url) {
-      // Navigate to login page when a redirect is received
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (context) => LoginPage(
-            loginUrl: url,
-            onLoginSuccess: () {
-              // Pop the login page and return to root
-              navigatorKey.currentState?.pop();
-            },
-          ),
-        ),
-      );
+      _router.go('/login?loginUrl=$url');
     });
   }
 
