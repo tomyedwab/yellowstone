@@ -30,8 +30,10 @@ class TaskListWidget extends StatefulWidget {
 }
 
 class _TaskListWidgetState extends State<TaskListWidget> {
+  bool _isLoading = true;
   List<Task> _tasks = [];
   Map<int, TaskRecentComment>? _recentComments;
+  TaskList? _taskList = null;
 
   @override
   void initState() {
@@ -54,9 +56,12 @@ class _TaskListWidgetState extends State<TaskListWidget> {
     try {
       final tasks = await widget.dataService.getTasksForList(widget.taskListId);
       final recentComments = await widget.dataService.getTaskListRecentComments(widget.taskListId); 
+      final taskList = await widget.dataService.getTaskListById(widget.taskListId);
       setState(() {
         _tasks = tasks;
         _recentComments = Map.fromEntries(recentComments.map((comment) => MapEntry(comment.taskId, comment)));
+        _taskList = taskList;
+        _isLoading = false;
       });
     } catch (e) {
       // TODO: Handle error
@@ -66,37 +71,69 @@ class _TaskListWidgetState extends State<TaskListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<TaskList>(
-      future: widget.dataService.getTaskListById(widget.taskListId),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final taskList = snapshot.data!;
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                taskList.title,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ),
-            if (_tasks.isEmpty) 
-              const Center(child: CircularProgressIndicator())
-            else if (widget.isSelectionMode)
-              Column(
-                children: [
-                  for (final task in _tasks)
-                    TaskCard(
-                      key: ValueKey(task.id),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            _taskList!.title,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ),
+        if (widget.isSelectionMode)
+          Column(
+            children: [
+              for (final task in _tasks)
+                TaskCard(
+                  key: ValueKey(task.id),
+                  dataService: widget.dataService,
+                  task: task,
+                  taskListId: widget.taskListId,
+                  taskListPrefix: widget.taskListPrefix,
+                  category: _taskList!.category,
+                  recentComment: _recentComments?[task.id],
+                  onComplete: () {
+                    widget.dataService.markTaskComplete(
+                      task.id,
+                      !task.isCompleted,
+                    );
+                  },
+                  isSelectionMode: true,
+                  isSelected: widget.selectedTaskIds.contains(task.id),
+                  isHighlighted: widget.selectedTaskId == task.id,
+                  onSelectionChanged: (selected) => widget.onTaskSelectionChanged(task.id),
+                ),
+            ],
+          )
+        else
+          SizedBox(
+            height: MediaQuery.of(context).size.height - 200, // Adjust this value as needed
+            child: ReorderableListView(
+              onReorder: (oldIndex, newIndex) {
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+                widget.dataService.reorderTasks(
+                  _taskList!.id,
+                  _tasks[oldIndex].id,
+                  newIndex == 0 ? null : _tasks[newIndex - 1].id,
+                );
+              },
+              children: [
+                for (final task in _tasks)
+                  KeyedSubtree(
+                    key: ValueKey(task.id),
+                    child: TaskCard(
                       dataService: widget.dataService,
                       task: task,
                       taskListId: widget.taskListId,
                       taskListPrefix: widget.taskListPrefix,
-                      category: taskList.category,
+                      category: _taskList!.category,
                       recentComment: _recentComments?[task.id],
                       onComplete: () {
                         widget.dataService.markTaskComplete(
@@ -104,60 +141,21 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                           !task.isCompleted,
                         );
                       },
-                      isSelectionMode: true,
-                      isSelected: widget.selectedTaskIds.contains(task.id),
+                      isSelectionMode: false,
+                      isSelected: false,
                       isHighlighted: widget.selectedTaskId == task.id,
-                      onSelectionChanged: (selected) => widget.onTaskSelectionChanged(task.id),
+                      onSelectionChanged: null,
                     ),
-                ],
-              )
-            else
-              ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                onReorder: (oldIndex, newIndex) {
-                  if (oldIndex < newIndex) {
-                    newIndex -= 1;
-                  }
-                  widget.dataService.reorderTasks(
-                    taskList.id,
-                    _tasks[oldIndex].id,
-                    newIndex == 0 ? null : _tasks[newIndex - 1].id,
-                  );
-                },
-                children: [
-                  for (final task in _tasks)
-                    KeyedSubtree(
-                      key: ValueKey(task.id),
-                      child: TaskCard(
-                        dataService: widget.dataService,
-                        task: task,
-                        taskListId: widget.taskListId,
-                        taskListPrefix: widget.taskListPrefix,
-                        category: taskList.category,
-                        recentComment: _recentComments?[task.id],
-                        onComplete: () {
-                          widget.dataService.markTaskComplete(
-                            task.id,
-                            !task.isCompleted,
-                          );
-                        },
-                        isSelectionMode: false,
-                        isSelected: false,
-                        isHighlighted: widget.selectedTaskId == task.id,
-                        onSelectionChanged: null,
-                      ),
-                    ),
-                ],
-              ),
-            if (!widget.isSelectionMode)
-              NewTaskCard(
-                dataService: widget.dataService,
-                taskListId: taskList.id,
-              ),
-          ],
-        );
-      },
+                  ),
+              ],
+            ),
+          ),
+        if (!widget.isSelectionMode)
+          NewTaskCard(
+            dataService: widget.dataService,
+            taskListId: _taskList!.id,
+          ),
+      ],
     );
   }
 }
