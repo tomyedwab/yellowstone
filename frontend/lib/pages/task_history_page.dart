@@ -4,9 +4,9 @@ import '../models/task_history.dart';
 import '../services/rest_data_service.dart';
 
 class TaskHistoryPage extends StatefulWidget {
-  final Task task;
+  final int taskId;
 
-  const TaskHistoryPage({super.key, required this.task});
+  const TaskHistoryPage({super.key, required this.taskId});
 
   @override
   State<TaskHistoryPage> createState() => _TaskHistoryPageState();
@@ -15,6 +15,7 @@ class TaskHistoryPage extends StatefulWidget {
 class _TaskHistoryPageState extends State<TaskHistoryPage> {
   final _commentController = TextEditingController();
   List<TaskHistory> _history = [];
+  String _title = "";
   bool _isLoading = true;
 
   @override
@@ -31,9 +32,10 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
 
   Future<void> _loadHistory() async {
     try {
-      final history = await RestDataService().getTaskHistory(widget.task.id);
+      final history = await RestDataService().getTaskHistory(widget.taskId);
       setState(() {
-        _history = history;
+        _history = history.history;
+        _title = history.title;
         _isLoading = false;
       });
     } catch (e) {
@@ -50,7 +52,7 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
     if (comment.isEmpty) return;
 
     try {
-      await RestDataService().addTaskComment(widget.task.id, comment);
+      await RestDataService().addTaskComment(widget.taskId, comment);
       _commentController.clear();
       await _loadHistory(); // Reload history to show new comment
     } catch (e) {
@@ -71,7 +73,7 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('History - ${widget.task.title}'),
+        title: Text(_title),
       ),
       body: Column(
         children: [
@@ -92,30 +94,40 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     _formatDateTime(entry.createdAt),
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(height: 8),
                                   if (entry.systemComment != "") ...[
                                     Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: Theme.of(context).colorScheme.surfaceVariant,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Text(entry.systemComment),
+                                      child: Text(
+                                        entry.systemComment,
+                                        softWrap: true,
+                                      ),
                                     ),
                                   ],
                                   if (entry.userComment != null) ...[
                                     Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: Theme.of(context).colorScheme.surfaceVariant,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Text(entry.userComment!),
+                                      child: Text(
+                                        entry.userComment!,
+                                        softWrap: true,
+                                      ),
                                     ),
                                   ],
                                 ],

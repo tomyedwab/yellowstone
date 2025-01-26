@@ -166,6 +166,12 @@ SELECT id, title, due_date, completed_at
 FROM task_v1 WHERE id = $1;
 `
 
+const getTaskTitleV1Sql = `
+SELECT title
+FROM task_v1
+WHERE id = $1;
+`
+
 type TaskV1 struct {
 	Id          int
 	Title       string

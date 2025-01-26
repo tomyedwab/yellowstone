@@ -7,11 +7,15 @@ import '../models/task.dart';
 class TaskListView extends StatefulWidget {
   final RestDataService dataService;
   final int taskListId;
+  final String taskListPrefix;
+  final int? selectedTaskId;
 
   const TaskListView({
     super.key,
     required this.dataService,
     required this.taskListId,
+    required this.taskListPrefix,
+    required this.selectedTaskId,
   });
 
   @override
@@ -195,8 +199,11 @@ class _TaskListViewState extends State<TaskListView> {
       ),
       body: SingleChildScrollView(
         child: TaskListWidget(
+          key: ValueKey('taskListWidget-${widget.taskListId}'),
           dataService: widget.dataService,
           taskListId: widget.taskListId,
+          taskListPrefix: widget.taskListPrefix,
+          selectedTaskId: widget.selectedTaskId,
           isSelectionMode: _isSelectionMode,
           selectedTaskIds: _selectedTaskIds,
           onTaskSelectionChanged: _toggleTaskSelection,

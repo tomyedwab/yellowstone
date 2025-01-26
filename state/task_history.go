@@ -132,10 +132,17 @@ type TaskHistoryV1 struct {
 
 type TaskHistoryV1Response struct {
 	History []TaskHistoryV1 `json:"history"`
+	Title   string          `json:"title"`
 }
 
 func taskHistoryDBForTask(db *sqlx.DB, taskId int) (TaskHistoryV1Response, error) {
 	var history []TaskHistoryV1 = make([]TaskHistoryV1, 0)
 	err := db.Select(&history, getTaskHistoryV1Sql, taskId)
-	return TaskHistoryV1Response{History: history}, err
+
+	var title string
+	if err == nil {
+		err = db.Get(&title, getTaskTitleV1Sql, taskId)
+	}
+
+	return TaskHistoryV1Response{History: history, Title: title}, err
 }

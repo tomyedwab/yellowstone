@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../services/rest_data_service.dart';
 import '../models/task_list.dart';
 import 'task_list_view.dart';
 
 class ArchivedListsPage extends StatefulWidget {
   final RestDataService dataService;
-  const ArchivedListsPage({super.key, required this.dataService});
+  final int? selectedListId;
+  const ArchivedListsPage({super.key, required this.dataService, this.selectedListId});
 
   @override
   State<ArchivedListsPage> createState() => _ArchivedListsPageState();
@@ -47,6 +49,7 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
   Widget build(BuildContext context) {
     final taskLists = _taskLists;
 
+    // TODO: Sort tasks by category and add headings
     return Scaffold(
       appBar: AppBar(
         title: const Text('Archived Lists'),
@@ -58,8 +61,10 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
           return Container(
             key: ValueKey(taskList.id),
             margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
-            decoration: const BoxDecoration(
-              border: Border(
+            decoration: BoxDecoration(
+              color: widget.selectedListId != null && widget.selectedListId == taskList.id ? const Color.fromARGB(255, 49, 65, 80) : null,
+              borderRadius: BorderRadius.circular(8),
+              border: const Border(
                 bottom: BorderSide(
                   color: Color(0xff182631),
                   width: 1.5,
@@ -72,15 +77,6 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Chip(
-                    label: Text(
-                      taskList.category.name,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: taskList.category == TaskListCategory.template
-                        ? Colors.blue
-                        : Colors.green,
-                  ),
                   IconButton(
                     icon: const Icon(Icons.unarchive),
                     onPressed: () {
@@ -90,15 +86,7 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
                 ],
               ),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TaskListView(
-                      dataService: widget.dataService,
-                      taskListId: taskList.id,
-                    ),
-                  ),
-                );
+                context.go('/archived/list/${taskList.id}');
               },
             ),
           );

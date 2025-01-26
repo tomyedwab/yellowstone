@@ -411,7 +411,7 @@ class RestDataService extends ChangeNotifier {
     });
   }
 
-  Future<List<TaskHistory>> getTaskHistory(int taskId) async {
+  Future<TaskHistoryResponse> getTaskHistory(int taskId) async {
     final response = await _getCachedResponse('$baseUrl/task/history?id=$taskId');
     
     if (response.statusCode != 200) {
@@ -421,7 +421,10 @@ class RestDataService extends ChangeNotifier {
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> history = data['history'];
     
-    return history.map((json) => TaskHistory.fromJson(json)).toList();
+    return TaskHistoryResponse(
+      history: history.map((json) => TaskHistory.fromJson(json)).toList(),
+      title: data['title'],
+    );
   }
 
   Future<void> addTaskComment(int taskId, String comment) async {

@@ -8,17 +8,21 @@ import 'new_task_card.dart';
 class TaskListWidget extends StatefulWidget {
   final RestDataService dataService;
   final int taskListId;
+  final String taskListPrefix;
   final bool isSelectionMode;
   final Set<int> selectedTaskIds;
+  final int? selectedTaskId;
   final void Function(int) onTaskSelectionChanged;
 
   const TaskListWidget({
     super.key,
     required this.dataService,
     required this.taskListId,
+    required this.taskListPrefix,
     this.isSelectionMode = false,
     required this.selectedTaskIds,
     required this.onTaskSelectionChanged,
+    required this.selectedTaskId,
   });
 
   @override
@@ -90,6 +94,8 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                       key: ValueKey(task.id),
                       dataService: widget.dataService,
                       task: task,
+                      taskListId: widget.taskListId,
+                      taskListPrefix: widget.taskListPrefix,
                       category: taskList.category,
                       recentComment: _recentComments?[task.id],
                       onComplete: () {
@@ -100,6 +106,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                       },
                       isSelectionMode: true,
                       isSelected: widget.selectedTaskIds.contains(task.id),
+                      isHighlighted: widget.selectedTaskId == task.id,
                       onSelectionChanged: (selected) => widget.onTaskSelectionChanged(task.id),
                     ),
                 ],
@@ -125,6 +132,8 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                       child: TaskCard(
                         dataService: widget.dataService,
                         task: task,
+                        taskListId: widget.taskListId,
+                        taskListPrefix: widget.taskListPrefix,
                         category: taskList.category,
                         recentComment: _recentComments?[task.id],
                         onComplete: () {
@@ -135,6 +144,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                         },
                         isSelectionMode: false,
                         isSelected: false,
+                        isHighlighted: widget.selectedTaskId == task.id,
                         onSelectionChanged: null,
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
@@ -9,6 +10,8 @@ import '../pages/task_history_page.dart';
 class TaskCard extends StatefulWidget {
   final RestDataService dataService;
   final Task task;
+  final int taskListId;
+  final String taskListPrefix;
   final TaskListCategory category;
   final VoidCallback? onComplete;
   final VoidCallback? onReorder;
@@ -16,6 +19,7 @@ class TaskCard extends StatefulWidget {
   final bool isDragging;
   final bool isSelectionMode;
   final bool isSelected;
+  final bool isHighlighted;
   final ValueChanged<bool>? onSelectionChanged;
   static final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
@@ -23,6 +27,8 @@ class TaskCard extends StatefulWidget {
     super.key,
     required this.dataService,
     required this.task,
+    required this.taskListId,
+    required this.taskListPrefix,
     required this.category,
     this.onComplete,
     this.onReorder,
@@ -30,6 +36,7 @@ class TaskCard extends StatefulWidget {
     this.recentComment,
     this.isSelectionMode = false,
     this.isSelected = false,
+    this.isHighlighted = false,
     this.onSelectionChanged,
   });
 
@@ -81,8 +88,10 @@ class _TaskCardState extends State<TaskCard> {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
-      decoration: const BoxDecoration(
-        border: Border(
+      decoration: BoxDecoration(
+        color: widget.isHighlighted ? const Color.fromARGB(255, 49, 65, 80) : null,
+        borderRadius: BorderRadius.circular(8),
+        border: const Border(
           bottom: BorderSide(
             color: Color(0xff182631),
             width: 1.5,
@@ -208,12 +217,7 @@ class _TaskCardState extends State<TaskCard> {
                   IconButton(
                     icon: const Icon(Icons.history),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TaskHistoryPage(task: widget.task),
-                        ),
-                      );
+                      context.go('${widget.taskListPrefix}list/${widget.taskListId}/task/${widget.task.id}/history');
                     },
                     tooltip: 'View history',
                   ),

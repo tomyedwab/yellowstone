@@ -1,18 +1,27 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
 import 'pages/todo_lists_page.dart';
 import 'pages/templates_page.dart';
 import 'pages/archived_lists_page.dart';
 import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
+import 'router.dart';
 
 void main() {
+  usePathUrlStrategy();
   runApp(YellowstoneApp());
 }
 
 class YellowstoneApp extends StatelessWidget {
+  final RestDataService _dataService = RestDataService();
+  late final GoRouter _router;
+
   YellowstoneApp({super.key}) {
+    _router = createRouter(_dataService);
     _dataService.setLoginRedirectHandler((url) {
       // Navigate to login page when a redirect is received
       navigatorKey.currentState?.push(
@@ -29,15 +38,13 @@ class YellowstoneApp extends StatelessWidget {
     });
   }
 
-  final RestDataService _dataService = RestDataService();
-
   // Global navigator key to enable navigation from outside of build context
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
+    return MaterialApp.router(
+      routerConfig: _router,
       title: 'Yellowstone',
       theme: ThemeData(
         useMaterial3: true,
@@ -76,60 +83,6 @@ class YellowstoneApp extends StatelessWidget {
           color: Color(0xfff6fbff),
         ),
       ),
-      home: RootPage(dataService: _dataService),
     );
   }
 }
-
-class RootPage extends StatefulWidget {
-  final RestDataService dataService;
-
-  const RootPage({
-    super.key,
-    required this.dataService,
-  });
-
-  @override
-  State<RootPage> createState() => _RootPageState();
-}
-
-class _RootPageState extends State<RootPage> {
-  int _selectedIndex = 0;
-
-  late final List<Widget> _pages = [
-    ToDoListsPage(dataService: widget.dataService),
-    TemplatesPage(dataService: widget.dataService),
-    ArchivedListsPage(dataService: widget.dataService),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        indicatorColor: const Color(0xff7faad0),
-        onDestinationSelected: (int index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedIndex: _selectedIndex,
-        destinations: const <NavigationDestination>[
-          NavigationDestination(
-            icon: Icon(Icons.list),
-            label: 'Lists',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.copy_all),
-            label: 'Templates',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.archive),
-            label: 'Archived',
-          ),
-        ],
-      ),
-    );
-  }
-}
-

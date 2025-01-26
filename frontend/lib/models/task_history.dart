@@ -26,3 +26,10 @@ class TaskHistory {
     );
   }
 } 
+
+class TaskHistoryResponse {
+  final List<TaskHistory> history;
+  final String title;
+
+  TaskHistoryResponse({required this.history, required this.title});
+}

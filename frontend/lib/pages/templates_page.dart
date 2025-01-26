@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../services/rest_data_service.dart';
 import '../models/task_list.dart';
 import 'task_list_view.dart';
 
 class TemplatesPage extends StatefulWidget {
   final RestDataService dataService;
-  const TemplatesPage({super.key, required this.dataService});
+  final int? selectedListId;
+  const TemplatesPage({super.key, required this.dataService, this.selectedListId});
 
   @override
   State<TemplatesPage> createState() => _TemplatesPageState();
@@ -56,55 +58,51 @@ class _TemplatesPageState extends State<TemplatesPage> {
       ),
       body: Column(
         children: [
-          Expanded(
-            child: ReorderableListView.builder(
-              itemCount: templates.length,
-              onReorder: (oldIndex, newIndex) {
-                final movedList = _taskLists[oldIndex];
-                
-                // If newIndex is 0, place at start
-                if (newIndex == 0) {
-                  widget.dataService.reorderTaskList(movedList.id, null);
-                } else {
-                  // Otherwise place after the item that's now at newIndex-1
-                  final afterList = _taskLists[newIndex - 1];
-                  widget.dataService.reorderTaskList(movedList.id, afterList.id);
-                }
-              },
-              itemBuilder: (context, index) {
-                final template = templates[index];
-                return Container(
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            onReorder: (oldIndex, newIndex) {
+              final movedList = _taskLists[oldIndex];
+              
+              // If newIndex is 0, place at start
+              if (newIndex == 0) {
+                widget.dataService.reorderTaskList(movedList.id, null);
+              } else {
+                // Otherwise place after the item that's now at newIndex-1
+                final afterList = _taskLists[newIndex - 1];
+                widget.dataService.reorderTaskList(movedList.id, afterList.id);
+              }
+            },
+            children: [
+              for (final template in templates)
+                KeyedSubtree(
                   key: ValueKey(template.id),
-                  margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Color(0xff182631),
-                        width: 1.5,
+                  child: Container(
+                    margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+                    decoration: BoxDecoration(
+                      color: widget.selectedListId != null && widget.selectedListId == template.id ? const Color.fromARGB(255, 49, 65, 80) : null,
+                      borderRadius: BorderRadius.circular(8),
+                      border: const Border(
+                        bottom: BorderSide(
+                          color: Color(0xff182631),
+                          width: 1.5,
+                        ),
                       ),
                     ),
+                    child: ListTile(
+                      title: Text(template.title),
+                      subtitle: Text('${_taskListMetadata[template.id]?.total ?? 0} tasks'),
+                      onTap: () {
+                        context.go('/templates/list/${template.id}');
+                      },
+                    ),
                   ),
-                  child: ListTile(
-                    title: Text(template.title),
-                    subtitle: Text('${_taskListMetadata[template.id]?.total ?? 0} tasks'),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TaskListView(
-                            dataService: widget.dataService,
-                            taskListId: template.id,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                ),
+            ],
           ),
           Card(
             margin: const EdgeInsets.all(8.0),
+            elevation: 0,
             child: ListTile(
               leading: const Icon(Icons.add),
               title: const Text('Create new template'),
