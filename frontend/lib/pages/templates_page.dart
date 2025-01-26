@@ -13,6 +13,7 @@ class TemplatesPage extends StatefulWidget {
 
 class _TemplatesPageState extends State<TemplatesPage> {
   List<TaskList> _taskLists = [];
+  Map<int, TaskListMetadata> _taskListMetadata = {};
 
   @override
   void initState() {
@@ -34,8 +35,10 @@ class _TemplatesPageState extends State<TemplatesPage> {
   Future<void> _loadTaskLists() async {
     try {
       final lists = await widget.dataService.getTaskLists();
+      final metadata = await widget.dataService.getTaskListMetadata();
       setState(() {
         _taskLists = lists.where((list) => list.category == TaskListCategory.template && !list.archived).toList();
+        _taskListMetadata = Map.fromEntries(metadata.map((m) => MapEntry(m.id, m)));
       });
     } catch (e) {
       // TODO: Handle error
@@ -83,7 +86,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
                   ),
                   child: ListTile(
                     title: Text(template.title),
-                    subtitle: Text('${template.taskIds.length} tasks'),
+                    subtitle: Text('${_taskListMetadata[template.id]?.total ?? 0} tasks'),
                     trailing: Chip(
                       label: Text(
                         template.category.name,

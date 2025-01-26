@@ -89,7 +89,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                   ),
                   child: ListTile(
                     title: Text(taskList.title),
-                    subtitle: Text('${_taskListMetadata[taskList.id]?.completed ?? 0} / ${_taskListMetadata[taskList.id]?.total ?? 0} tasks'),
+                    subtitle: Text('${_taskListMetadata[taskList.id]?.total ?? 0} tasks, ${_taskListMetadata[taskList.id]?.completed ?? 0} completed'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
