@@ -258,4 +258,23 @@ func InitTaskListHandlers(db *database.Database) {
 			database.HandleAPIResponse(w, r, resp, err)
 		},
 	))
+
+	http.HandleFunc("/api/tasklist/recent_comments", middleware.ApplyDefault(
+		func(w http.ResponseWriter, r *http.Request) {
+			listIdStr := r.URL.Query().Get("listId")
+			if listIdStr == "" {
+				http.Error(w, "Missing listId parameter", http.StatusBadRequest)
+				return
+			}
+
+			listId, err := strconv.Atoi(listIdStr)
+			if err != nil {
+				http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
+				return
+			}
+
+			resp, err := taskListDBRecentComments(db.GetDB(), listId)
+			database.HandleAPIResponse(w, r, resp, err)
+		},
+	))
 }

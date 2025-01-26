@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"tomyedwab.com/yellowstone-server/database/events"
@@ -119,10 +120,31 @@ LEFT JOIN task_v1 ON task_to_list_v1.task_id = task_v1.id
 GROUP BY list_id;
 `
 
+const getRecentCommentsForListV1Sql = `
+WITH latest_comments AS (
+    SELECT task_id, user_comment, created_at,
+           ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY created_at DESC) as rn
+    FROM task_history_v1
+    WHERE user_comment IS NOT NULL
+)
+SELECT ttl.list_id, ttl.task_id, lc.user_comment, lc.created_at
+FROM task_to_list_v1 ttl
+LEFT JOIN latest_comments lc ON ttl.task_id = lc.task_id AND lc.rn = 1
+WHERE ttl.list_id = $1 AND lc.user_comment IS NOT NULL
+ORDER BY ttl.position;
+`
+
 type TaskListMetadataV1 struct {
 	ListId    int `db:"list_id"`
 	Total     int `db:"total"`
 	Completed int `db:"completed"`
+}
+
+type TaskRecentCommentV1 struct {
+	ListId      int        `db:"list_id"`
+	TaskId      int        `db:"task_id"`
+	UserComment *string    `db:"user_comment"`
+	CreatedAt   *time.Time `db:"created_at"`
 }
 
 func taskDBForList(db *sqlx.DB, listId int) (TaskV1Response, error) {
@@ -135,4 +157,10 @@ func taskListDBMetadata(db *sqlx.DB) ([]TaskListMetadataV1, error) {
 	var metadata []TaskListMetadataV1 = make([]TaskListMetadataV1, 0)
 	err := db.Select(&metadata, getTaskMetadataV1Sql)
 	return metadata, err
+}
+
+func taskListDBRecentComments(db *sqlx.DB, listId int) ([]TaskRecentCommentV1, error) {
+	var comments []TaskRecentCommentV1 = make([]TaskRecentCommentV1, 0)
+	err := db.Select(&comments, getRecentCommentsForListV1Sql, listId)
+	return comments, err
 }

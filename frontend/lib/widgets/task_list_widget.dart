@@ -21,6 +21,7 @@ class TaskListWidget extends StatefulWidget {
 
 class _TaskListWidgetState extends State<TaskListWidget> {
   List<Task> _tasks = [];
+  Map<int, TaskRecentComment>? _recentComments;
 
   @override
   void initState() {
@@ -42,8 +43,10 @@ class _TaskListWidgetState extends State<TaskListWidget> {
   Future<void> _loadTasks() async {
     try {
       final tasks = await widget.dataService.getTasksForList(widget.taskListId);
+      final recentComments = await widget.dataService.getTaskListRecentComments(widget.taskListId); 
       setState(() {
         _tasks = tasks;
+        _recentComments = Map.fromEntries(recentComments.map((comment) => MapEntry(comment.taskId, comment)));
       });
     } catch (e) {
       // TODO: Handle error
@@ -85,6 +88,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                             dataService: widget.dataService,
                             task: task,
                             category: taskList.category,
+                            recentComment: _recentComments?[task.id],
                             onComplete: () {
                               widget.dataService.markTaskComplete(
                                 task.id,

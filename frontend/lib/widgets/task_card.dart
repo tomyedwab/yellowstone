@@ -12,6 +12,7 @@ class TaskCard extends StatefulWidget {
   final TaskListCategory category;
   final VoidCallback? onComplete;
   final VoidCallback? onReorder;
+  final TaskRecentComment? recentComment;
   final bool isDragging;
   static final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
@@ -23,6 +24,7 @@ class TaskCard extends StatefulWidget {
     this.onComplete,
     this.onReorder,
     this.isDragging = false,
+    this.recentComment,
   });
 
   @override
@@ -128,23 +130,38 @@ class _TaskCardState extends State<TaskCard> {
                   ),
                 ),
             ),
-          subtitle: widget.task.completedAt != null ?
-            Text(
-                'Completed ${TaskCard._dateFormat.format(widget.task.completedAt!)}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+          subtitle: widget.task.completedAt != null || widget.task.dueDate != null || widget.recentComment != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.task.completedAt != null)
+                    Text(
+                      'Completed ${TaskCard._dateFormat.format(widget.task.completedAt!)}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    )
+                  else if (widget.task.dueDate != null)
+                    Text(
+                      'Due ${TaskCard._dateFormat.format(widget.task.dueDate!)}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  if (widget.recentComment != null)
+                    Text(
+                      widget.recentComment!.userComment,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic
+                      ),
+                    ),
+                ],
               )
-            : widget.task.dueDate != null
-              ? Text(
-                  'Due ${TaskCard._dateFormat.format(widget.task.dueDate!)}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                )
-              : null,
+            : null,
           leading: GestureDetector(
             onTap: () {
               if (widget.category != TaskListCategory.template) {

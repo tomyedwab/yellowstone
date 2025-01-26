@@ -308,6 +308,19 @@ class RestDataService extends ChangeNotifier {
     }
   }
 
+  Future<List<TaskRecentComment>> getTaskListRecentComments(int taskListId) async {
+    final response = await _getCachedResponse('$baseUrl/tasklist/recent_comments?listId=$taskListId');
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load task list recent comments');
+    }
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => TaskRecentComment(
+      taskId: json['TaskId'],
+      userComment: json['UserComment'],
+      createdAt: DateTime.parse(json['CreatedAt']),
+    )).toList();
+  }
+
   Future<void> updateTaskTitle(int taskId, String title) async {
     await doPublishRequest({
       'type': 'yellowstone:updateTaskTitle',

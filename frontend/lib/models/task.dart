@@ -19,3 +19,15 @@ class Task {
     this.completedAt,
   });
 }
+
+class TaskRecentComment {
+  final int taskId;
+  final String userComment;
+  final DateTime createdAt;
+
+  TaskRecentComment({
+    required this.taskId,
+    required this.userComment,
+    required this.createdAt,
+  });
+}
