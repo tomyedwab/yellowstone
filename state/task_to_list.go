@@ -28,6 +28,20 @@ type AddTaskToListEvent struct {
 	ListId int `db:"list_id"`
 }
 
+type MoveTasksEvent struct {
+	events.GenericEvent
+
+	TaskIds   []int `db:"task_ids"`
+	NewListId int   `db:"new_list_id"`
+}
+
+type CopyTasksEvent struct {
+	events.GenericEvent
+
+	TaskIds   []int `db:"task_ids"`
+	NewListId int   `db:"new_list_id"`
+}
+
 type ReorderTasksEvent struct {
 	events.GenericEvent
 
@@ -45,6 +59,17 @@ FROM task_to_list_v1 WHERE list_id = :list_id;
 
 const deleteTaskToListV1Sql = `
 DELETE FROM task_to_list_v1
+WHERE task_id = :task_id;
+`
+
+const moveTaskToListV1Sql = `
+UPDATE task_to_list_v1
+SET list_id = :new_list_id,
+    position = (
+        SELECT COALESCE(MAX(position), 0) + 1
+        FROM task_to_list_v1
+        WHERE list_id = :new_list_id
+    )
 WHERE task_id = :task_id;
 `
 
@@ -89,6 +114,32 @@ func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 		fmt.Printf("TaskToList v1: DeleteTaskEvent %d %d\n", evt.Id, evt.TaskId)
 		_, err := tx.NamedExec(deleteTaskToListV1Sql, evt)
 		return true, err
+
+	case *MoveTasksEvent:
+		fmt.Printf("TaskToList v1: MoveTasksEvent %d %v to %d\n", evt.Id, evt.TaskIds, evt.NewListId)
+		for _, taskId := range evt.TaskIds {
+			_, err := tx.NamedExec(moveTaskToListV1Sql, map[string]interface{}{
+				"task_id":     taskId,
+				"new_list_id": evt.NewListId,
+			})
+			if err != nil {
+				return true, err
+			}
+		}
+		return true, nil
+
+	case *CopyTasksEvent:
+		fmt.Printf("TaskToList v1: CopyTasksEvent %d %v to %d\n", evt.Id, evt.TaskIds, evt.NewListId)
+		for _, taskId := range evt.TaskIds {
+			_, err := tx.NamedExec(insertTaskToListV1Sql, map[string]interface{}{
+				"task_id": taskId,
+				"list_id": evt.NewListId,
+			})
+			if err != nil {
+				return true, err
+			}
+		}
+		return true, nil
 
 	case *ReorderTasksEvent:
 		fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d %d %v\n", evt.Id, evt.TaskListId, evt.OldTaskId, evt.AfterTaskId)

@@ -466,4 +466,42 @@ class RestDataService extends ChangeNotifier {
       }
     }
   }
+
+  Future<List<TaskList>> getAllTaskLists() async {
+    final response = await _getCachedResponse('$baseUrl/tasklist/all');
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load task lists');
+    }
+    
+    final Map<String, dynamic> data = json.decode(response.body);
+    final List<dynamic> taskLists = data['TaskLists'];
+      
+    return taskLists.map((json) => TaskList(
+      id: json['Id'],
+      title: json['Title'],
+      category: _categoryFromString(json['Category']),
+      archived: json['Archived'],
+    )).toList();
+  }
+
+  Future<void> moveTasksToList(Set<int> taskIds, int newListId) async {
+    await doPublishRequest({
+      'type': 'yellowstone:moveTasks',
+      'taskIds': taskIds.toList(),
+      'newListId': newListId,
+    });
+    _currentEventId++;
+    notifyListeners();
+  }
+
+  Future<void> copyTasksToList(Set<int> taskIds, int newListId) async {
+    await doPublishRequest({
+      'type': 'yellowstone:copyTasks',
+      'taskIds': taskIds.toList(),
+      'newListId': newListId,
+    });
+    _currentEventId++;
+    notifyListeners();
+  }
 }

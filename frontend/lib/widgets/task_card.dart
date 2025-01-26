@@ -14,6 +14,9 @@ class TaskCard extends StatefulWidget {
   final VoidCallback? onReorder;
   final TaskRecentComment? recentComment;
   final bool isDragging;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final ValueChanged<bool>? onSelectionChanged;
   static final DateFormat _dateFormat = DateFormat('MMM dd, yyyy');
 
   const TaskCard({
@@ -25,6 +28,9 @@ class TaskCard extends StatefulWidget {
     this.onReorder,
     this.isDragging = false,
     this.recentComment,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
   });
 
   @override
@@ -117,7 +123,7 @@ class _TaskCardState extends State<TaskCard> {
               ],
             )
             : GestureDetector(
-                onTap: () => setState(() => _isEditing = true),
+                onTap: widget.isSelectionMode ? null : () => setState(() => _isEditing = true),
                 child: Text(
                   widget.task.title,
                   style: TextStyle(
@@ -162,68 +168,78 @@ class _TaskCardState extends State<TaskCard> {
                 ],
               )
             : null,
-          leading: GestureDetector(
-            onTap: () {
-              if (widget.category != TaskListCategory.template) {
-                widget.onComplete?.call();
-              }
-            },
-            child: Container(
-              width: 36,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white,
-                  width: 2,
+          leading: widget.isSelectionMode
+            ? Checkbox(
+                value: widget.isSelected,
+                onChanged: (value) => widget.onSelectionChanged?.call(value ?? false),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              )
+            : GestureDetector(
+                onTap: () {
+                  if (widget.category != TaskListCategory.template) {
+                    widget.onComplete?.call();
+                  }
+                },
+                child: Container(
+                  width: 36,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                  ),
+                  child: widget.task.isCompleted
+                      ? const Icon(
+                        Icons.check,
+                        size: 16,
+                        color: Colors.white,
+                      )
+                      : null,
                 ),
               ),
-              child: widget.task.isCompleted
-                  ? const Icon(
-                    Icons.check,
-                    size: 16,
-                    color: Colors.white,
-                  )
-                  : null,
-            ),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.history),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TaskHistoryPage(task: widget.task),
-                    ),
-                  );
-                },
-                tooltip: 'View history',
-              ),
-              GestureDetector(
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => TaskOptionsSheet(
-                      task: widget.task,
-                      onDelete: () {
-                        Navigator.pop(context);
-                        widget.dataService.deleteTask(
-                          widget.task.taskListId,
-                          widget.task.id,
-                        );
-                      },
-                      onEditDueDate: _selectDueDate,
-                      onClearDueDate: _clearDueDate,
-                    ),
-                  );
-                },
-                child: const Icon(Icons.more_vert),
-              ),
-            ],
-          ),
+          trailing: !widget.isSelectionMode
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.history),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TaskHistoryPage(task: widget.task),
+                        ),
+                      );
+                    },
+                    tooltip: 'View history',
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) => TaskOptionsSheet(
+                          task: widget.task,
+                          onDelete: () {
+                            Navigator.pop(context);
+                            widget.dataService.deleteTask(
+                              widget.task.taskListId,
+                              widget.task.id,
+                            );
+                          },
+                          onEditDueDate: _selectDueDate,
+                          onClearDueDate: _clearDueDate,
+                        ),
+                      );
+                    },
+                    child: const Icon(Icons.more_vert),
+                  ),
+                ],
+              )
+            : null,
         ),
       ),
     );

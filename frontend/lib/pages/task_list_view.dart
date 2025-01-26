@@ -20,6 +20,8 @@ class TaskListView extends StatefulWidget {
 
 class _TaskListViewState extends State<TaskListView> {
   TaskList? _taskList;
+  bool _isSelectionMode = false;
+  final Set<int> _selectedTaskIds = {};
 
   @override
   void initState() {
@@ -38,6 +40,25 @@ class _TaskListViewState extends State<TaskListView> {
     _loadTaskList();
   }
 
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedTaskIds.clear();
+      }
+    });
+  }
+
+  void _toggleTaskSelection(int taskId) {
+    setState(() {
+      if (_selectedTaskIds.contains(taskId)) {
+        _selectedTaskIds.remove(taskId);
+      } else {
+        _selectedTaskIds.add(taskId);
+      }
+    });
+  }
+
   Future<void> _loadTaskList() async {
     try {
       final taskList = await widget.dataService.getTaskListById(widget.taskListId);
@@ -48,6 +69,48 @@ class _TaskListViewState extends State<TaskListView> {
       // TODO: Handle error
       print('Error loading task list: $e');
     }
+  }
+
+  Future<void> _showListSelectionDialog({required bool isCopy}) async {
+    final lists = await widget.dataService.getAllTaskLists();
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isCopy ? 'Add to List' : 'Move to List'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: lists.length,
+            itemBuilder: (context, index) {
+              final list = lists[index];
+              if (list.id == widget.taskListId) return const SizedBox.shrink();
+              
+              return ListTile(
+                title: Text(list.title),
+                onTap: () {
+                  if (isCopy) {
+                    widget.dataService.copyTasksToList(_selectedTaskIds, list.id);
+                  } else {
+                    widget.dataService.moveTasksToList(_selectedTaskIds, list.id);
+                  }
+                  Navigator.pop(context);
+                  _toggleSelectionMode();
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -66,63 +129,85 @@ class _TaskListViewState extends State<TaskListView> {
       appBar: AppBar(
         title: Text(taskList.title),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Rename List'),
-                  content: TextField(
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter new title',
-                    ),
-                    onSubmitted: (value) {
-                      if (value.isNotEmpty) {
-                        widget.dataService.updateTaskListTitle(
-                          taskList.id,
-                          value,
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('CANCEL'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(taskList.archived ? Icons.unarchive : Icons.archive),
-            onPressed: () {
-              if (taskList.archived) {
-                widget.dataService.unarchiveTaskList(taskList.id);
-                // TODO: Navigate to Lists page
-              } else {
-                widget.dataService.archiveTaskList(taskList.id);
-                // TODO: Navigate to ArchivedListsPage
-              }
-            },
-          ),
-          Chip(
-            label: Text(
-              taskList.category.name,
-              style: const TextStyle(color: Colors.black),
+          if (_isSelectionMode) ...[
+            IconButton(
+              icon: const Icon(Icons.library_add),
+              onPressed: () => _showListSelectionDialog(isCopy: true),
+              tooltip: 'Add to another list',
             ),
-            backgroundColor: const Color(0xff7faad0)
-          )
+            IconButton(
+              icon: const Icon(Icons.drive_file_move),
+              onPressed: () => _showListSelectionDialog(isCopy: false),
+              tooltip: 'Move to another list',
+            ),
+          ],
+          IconButton(
+            icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
+            onPressed: _toggleSelectionMode,
+            tooltip: _isSelectionMode ? 'Exit selection mode' : 'Enter selection mode',
+          ),
+          if (!_isSelectionMode) ...[
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Rename List'),
+                    content: TextField(
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter new title',
+                      ),
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          widget.dataService.updateTaskListTitle(
+                            taskList.id,
+                            value,
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('CANCEL'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: Icon(taskList.archived ? Icons.unarchive : Icons.archive),
+              onPressed: () {
+                if (taskList.archived) {
+                  widget.dataService.unarchiveTaskList(taskList.id);
+                  // TODO: Navigate to Lists page
+                } else {
+                  widget.dataService.archiveTaskList(taskList.id);
+                  // TODO: Navigate to ArchivedListsPage
+                }
+              },
+            ),
+            Chip(
+              label: Text(
+                taskList.category.name,
+                style: const TextStyle(color: Colors.black),
+              ),
+              backgroundColor: const Color(0xff7faad0)
+            )
+          ],
         ],
       ),
       body: SingleChildScrollView(
         child: TaskListWidget(
           dataService: widget.dataService,
           taskListId: widget.taskListId,
+          isSelectionMode: _isSelectionMode,
+          selectedTaskIds: _selectedTaskIds,
+          onTaskSelectionChanged: _toggleTaskSelection,
         ),
       ),
     );
