@@ -144,11 +144,6 @@ class _TaskListViewState extends State<TaskListView> {
           tooltip: 'Move to another list',
         ),
       ],
-      IconButton(
-        icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
-        onPressed: _toggleSelectionMode,
-        tooltip: _isSelectionMode ? 'Exit selection mode' : 'Enter selection mode',
-      ),
       if (!_isSelectionMode) ...[
         IconButton(
           icon: const Icon(Icons.edit),
@@ -195,6 +190,11 @@ class _TaskListViewState extends State<TaskListView> {
           },
         ),
       ],
+      IconButton(
+        icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
+        onPressed: _toggleSelectionMode,
+        tooltip: _isSelectionMode ? 'Exit selection mode' : 'Enter selection mode',
+      ),
     ];
 
     final body = TaskListWidget(

@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 import '../services/rest_data_service.dart';
+import '../services/responsive_service.dart';
 import 'task_options_sheet.dart';
 import '../pages/task_history_page.dart';
 
 class TaskCard extends StatefulWidget {
   final RestDataService dataService;
+  final ResponsiveService responsiveService;
   final Task task;
   final int taskListId;
   final String taskListPrefix;
@@ -27,6 +29,7 @@ class TaskCard extends StatefulWidget {
   const TaskCard({
     super.key,
     required this.dataService,
+    required this.responsiveService,
     required this.task,
     required this.taskListId,
     required this.taskListPrefix,
@@ -90,7 +93,7 @@ class _TaskCardState extends State<TaskCard> {
   Widget build(BuildContext context) {
     final labels = widget.labels ?? [];
     return Container(
-      margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+      margin: const EdgeInsets.only(left: 16.0, right: 4.0, top: 4.0, bottom: 4.0),
       decoration: BoxDecoration(
         color: widget.isHighlighted ? const Color.fromARGB(255, 49, 65, 80) : null,
         borderRadius: BorderRadius.circular(8),
@@ -268,6 +271,7 @@ class _TaskCardState extends State<TaskCard> {
                     },
                     child: const Icon(Icons.more_vert),
                   ),
+                  if (widget.responsiveService.reorderableHandlesVisible) const SizedBox(width: 30),
                 ],
               )
             : null,

@@ -56,7 +56,7 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
         final taskList = _taskLists[index];
         return Container(
           key: ValueKey(taskList.id),
-          margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+          margin: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),
           decoration: BoxDecoration(
             color: widget.selectedListId != null && widget.selectedListId == taskList.id ? const Color.fromARGB(255, 49, 65, 80) : null,
             borderRadius: BorderRadius.circular(8),

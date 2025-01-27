@@ -52,11 +52,10 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomBoxSize = (widget.responsiveService.layoutType == LayoutType.horizontal) ? 80 : 216;
     return Column(
       children: [
         SizedBox(
-          height: MediaQuery.of(context).size.height - bottomBoxSize, // Adjust this value as needed
+          height: MediaQuery.of(context).size.height - widget.responsiveService.listsViewBottomBoxSize,
           child: ReorderableListView(
             onReorder: (oldIndex, newIndex) {
               final movedList = _taskLists[oldIndex];
@@ -75,7 +74,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
                 KeyedSubtree(
                   key: ValueKey(template.id),
                   child: Container(
-                    margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
                     decoration: BoxDecoration(
                       color: widget.selectedListId != null && widget.selectedListId == template.id ? const Color.fromARGB(255, 49, 65, 80) : null,
                       borderRadius: BorderRadius.circular(8),

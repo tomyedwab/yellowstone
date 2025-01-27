@@ -90,40 +90,44 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final bottomBoxSize = (widget.responsiveService.layoutType == LayoutType.horizontal) ? 144 : 280;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.isSelectionMode)
-          Column(
-            children: [
-              for (final task in _tasks)
-                TaskCard(
-                  key: ValueKey(task.id),
-                  dataService: widget.dataService,
-                  task: task,
-                  taskListId: widget.taskListId,
-                  taskListPrefix: widget.taskListPrefix,
-                  category: _taskList!.category,
-                  labels: _taskLabels[task.id],
-                  recentComment: _recentComments?[task.id],
-                  onComplete: () {
-                    widget.dataService.markTaskComplete(
-                      task.id,
-                      !task.isCompleted,
-                    );
-                  },
-                  isSelectionMode: true,
-                  isSelected: widget.selectedTaskIds.contains(task.id),
-                  isHighlighted: widget.selectedTaskId == task.id,
-                  onSelectionChanged: (selected) => widget.onTaskSelectionChanged(task.id),
-                ),
-            ],
+          SizedBox(
+            height: MediaQuery.of(context).size.height - widget.responsiveService.tasksViewBottomBoxSize,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  for (final task in _tasks)
+                    TaskCard(
+                      key: ValueKey(task.id),
+                      dataService: widget.dataService,
+                      responsiveService: widget.responsiveService,
+                      task: task,
+                      taskListId: widget.taskListId,
+                      taskListPrefix: widget.taskListPrefix,
+                      category: _taskList!.category,
+                      labels: _taskLabels[task.id],
+                      recentComment: _recentComments?[task.id],
+                      onComplete: () {
+                        widget.dataService.markTaskComplete(
+                          task.id,
+                          !task.isCompleted,
+                        );
+                      },
+                      isSelectionMode: true,
+                      isSelected: widget.selectedTaskIds.contains(task.id),
+                      isHighlighted: widget.selectedTaskId == task.id,
+                      onSelectionChanged: (selected) => widget.onTaskSelectionChanged(task.id),
+                    ),
+                ],
+              )
+            )
           )
         else
           SizedBox(
-            height: MediaQuery.of(context).size.height - bottomBoxSize, // Adjust this value as needed
+            height: MediaQuery.of(context).size.height - widget.responsiveService.tasksViewBottomBoxSize,
             child: ReorderableListView(
               onReorder: (oldIndex, newIndex) {
                 if (oldIndex < newIndex) {
@@ -141,6 +145,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     key: ValueKey(task.id),
                     child: TaskCard(
                       dataService: widget.dataService,
+                      responsiveService: widget.responsiveService,
                       task: task,
                       taskListId: widget.taskListId,
                       taskListPrefix: widget.taskListPrefix,

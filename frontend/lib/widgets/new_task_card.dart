@@ -41,7 +41,7 @@ class _NewTaskCardState extends State<NewTaskCard> {
         borderRadius: BorderRadius.circular(0),
       ),
       child: Padding(
-        padding: const EdgeInsets.only(left: 56.0, right: 16.0, top: 4.0, bottom: 4.0),
+        padding: const EdgeInsets.only(left: 52.0, right: 4.0, top: 4.0, bottom: 4.0),
         child: Row(
           children: [
             Expanded(

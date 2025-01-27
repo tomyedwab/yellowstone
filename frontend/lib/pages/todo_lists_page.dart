@@ -57,11 +57,10 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomBoxSize = (widget.responsiveService.layoutType == LayoutType.horizontal) ? 80 : 216;
     return Column(
       children: [
         SizedBox(
-          height: MediaQuery.of(context).size.height - bottomBoxSize, // Adjust this value as needed
+          height: MediaQuery.of(context).size.height - widget.responsiveService.listsViewBottomBoxSize,
           child: ReorderableListView(
             onReorder: (oldIndex, newIndex) async {
               final movedList = _taskLists[oldIndex];
@@ -80,7 +79,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                 KeyedSubtree(
                   key: ValueKey(taskList.id),
                   child: Container(
-                    margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
                     decoration: BoxDecoration(
                       color: widget.selectedListId != null && widget.selectedListId == taskList.id ? const Color.fromARGB(255, 49, 65, 80) : null,
                       borderRadius: BorderRadius.circular(8),
@@ -103,6 +102,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
                               widget.dataService.archiveTaskList(taskList.id);
                             },
                           ),
+                          if (widget.responsiveService.reorderableHandlesVisible) const SizedBox(width: 12),
                         ],
                       ),
                       onTap: () {
