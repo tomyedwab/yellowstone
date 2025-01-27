@@ -52,7 +52,7 @@ class _LabelsPageState extends State<LabelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SafeArea(child: Column(
       children: [
         SizedBox(
           height: MediaQuery.of(context).size.height - widget.responsiveService.listsViewBottomBoxSize,
@@ -135,6 +135,6 @@ class _LabelsPageState extends State<LabelsPage> {
           ),
         ),
       ],
-    );
+    ));
   }
 }

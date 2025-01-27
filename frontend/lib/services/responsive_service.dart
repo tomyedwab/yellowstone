@@ -22,13 +22,13 @@ class ResponsiveService {
   LayoutType get layoutType => _layoutType;
 
   double get listsViewBottomBoxSize => _layoutType == LayoutType.horizontal ? (
-    kIsWeb ? 80 : 88
+    kIsWeb ? 80 : 144
   ) : (
-    kIsWeb ? 160 : 192
+    kIsWeb ? 160 : 216
   );
 
   double get tasksViewBottomBoxSize => _layoutType == LayoutType.horizontal ? (
-    kIsWeb ? 144 : 144
+    kIsWeb ? 144 : 180
   ) : (
     kIsWeb ? 280 : 328
   );

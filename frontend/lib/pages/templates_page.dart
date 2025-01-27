@@ -52,7 +52,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SafeArea(child: Column(
       children: [
         SizedBox(
           height: MediaQuery.of(context).size.height - widget.responsiveService.listsViewBottomBoxSize,
@@ -135,6 +135,6 @@ class _TemplatesPageState extends State<TemplatesPage> {
           ),
         ),
       ],
-    );
+    ));
   }
 }

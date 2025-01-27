@@ -57,7 +57,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SafeArea(child: Column(
       children: [
         SizedBox(
           height: MediaQuery.of(context).size.height - widget.responsiveService.listsViewBottomBoxSize,
@@ -152,7 +152,7 @@ class _ToDoListsPageState extends State<ToDoListsPage> {
           ),
         ),
       ],
-    );
+    ));
   }
 }
 
