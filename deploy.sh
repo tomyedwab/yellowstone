@@ -29,9 +29,10 @@ echo "Building new version: $NEW_VERSION"
 docker build -t tomyedwab/yellowstone-arm64:${NEW_VERSION} -f Dockerfile.arm64 . && \
   docker push tomyedwab/yellowstone-arm64:${NEW_VERSION}
 
-cd frontend && \
+pushd frontend && \
   flutter build web && \
-  flutter build apk
+  flutter build apk && \
+  popd
 
 echo "Tagging new version: $NEW_VERSION"
 
