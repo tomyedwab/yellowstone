@@ -36,9 +36,9 @@ cd frontend && \
 echo "Tagging new version: $NEW_VERSION"
 
 # Commit the changes to the main branch
-# git add frontend/pubspec.yaml main.go
-# git commit -m "Bump version to $NEW_VERSION"
-# git push
+git add frontend/pubspec.yaml main.go
+git commit -m "Bump version to $NEW_VERSION"
+git push
 
-# git tag -a v$NEW_VERSION -m "Release version $NEW_VERSION"
-# git push origin v$NEW_VERSION
+git tag -a v$NEW_VERSION -m "Release version $NEW_VERSION"
+git push origin v$NEW_VERSION
