@@ -9,34 +9,44 @@ import 'pages/templates_page.dart';
 import 'pages/labels_page.dart';
 import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
+import 'services/responsive_service.dart';
 
-List<GoRoute> createSubRoutes(RestDataService dataService, int selectedIndex, Widget Function(int?) mainPage, String taskListPrefix) {
+List<GoRoute> createSubRoutes(
+  RestDataService dataService,
+  int selectedIndex,
+  Widget Function(ResponsiveService, int?) mainPage,
+  String taskListPrefix,
+) {
   return [
     GoRoute(
       path: 'list/:listId',
-      builder: (context, state) => ResponsiveScaffold(
+      builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+        responsiveService: responsiveService,
         selectedIndex: selectedIndex,
         children: [
-          mainPage(int.parse(state.pathParameters['listId']!)),
+          mainPage(responsiveService, int.parse(state.pathParameters['listId']!)),
           TaskListView(
             key: ValueKey('taskListView-${state.pathParameters['listId']}-${state.pathParameters['taskId']}'),
             dataService: dataService,
+            responsiveService: responsiveService,
             taskListId: int.parse(state.pathParameters['listId']!),
             taskListPrefix: taskListPrefix,
             selectedTaskId: null,
           ),
         ],
-      ),
+      )),
       routes: [
         GoRoute(
           path: 'task/:taskId/history',
-          builder: (context, state) => ResponsiveScaffold(
+          builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+            responsiveService: responsiveService,
             selectedIndex: selectedIndex,
             children: [
-              mainPage(int.parse(state.pathParameters['listId']!)),
+              mainPage(responsiveService, int.parse(state.pathParameters['listId']!)),
               TaskListView(
                 key: ValueKey('taskListView-${state.pathParameters['listId']}-${state.pathParameters['taskId']}'),
                 dataService: dataService,
+                responsiveService: responsiveService,
                 taskListId: int.parse(state.pathParameters['listId']!),
                 taskListPrefix: taskListPrefix,
                 selectedTaskId: int.parse(state.pathParameters['taskId']!),
@@ -44,9 +54,10 @@ List<GoRoute> createSubRoutes(RestDataService dataService, int selectedIndex, Wi
               TaskHistoryPage(
                 key: ValueKey('taskHistoryPage-${state.pathParameters['taskId']}'),
                 taskId: int.parse(state.pathParameters['taskId']!),
+                responsiveService: responsiveService,
               ),
             ],
-          ),
+          )),
         ),
       ]
     ),
@@ -59,43 +70,63 @@ GoRouter createRouter(RestDataService dataService) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => ResponsiveScaffold(
+        builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          responsiveService: responsiveService,
           selectedIndex: 0,
           children: [
-            ToDoListsPage(dataService: dataService),
+            ToDoListsPage(dataService: dataService, responsiveService: responsiveService),
           ],
-        ),
-        routes: createSubRoutes(dataService, 0, (selectedListId) => ToDoListsPage(dataService: dataService, selectedListId: selectedListId), '/'),
+        )),
+        routes: createSubRoutes(
+          dataService,
+          0,
+          (responsiveService, selectedListId) => ToDoListsPage(dataService: dataService, selectedListId: selectedListId, responsiveService: responsiveService),
+          '/'),
       ),
       GoRoute(
         path: '/labels',
-        builder: (context, state) => ResponsiveScaffold(
+        builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          responsiveService: responsiveService,
           selectedIndex: 1,
           children: [
-            LabelsPage(dataService: dataService),
+            LabelsPage(dataService: dataService, responsiveService: responsiveService),
           ],
-        ),
-        routes: createSubRoutes(dataService, 1, (selectedListId) => LabelsPage(dataService: dataService, selectedListId: selectedListId), '/labels/'),
+        )),
+        routes: createSubRoutes(
+          dataService,
+          1,
+          (responsiveService, selectedListId) => LabelsPage(dataService: dataService, selectedListId: selectedListId, responsiveService: responsiveService),
+          '/labels/'),
       ),
       GoRoute(
         path: '/templates',
-        builder: (context, state) => ResponsiveScaffold(
+        builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          responsiveService: responsiveService,
           selectedIndex: 2,
           children: [
-            TemplatesPage(dataService: dataService),
+            TemplatesPage(dataService: dataService, responsiveService: responsiveService),
           ],
-        ),
-        routes: createSubRoutes(dataService, 1, (selectedListId) => TemplatesPage(dataService: dataService, selectedListId: selectedListId), '/templates/'),
+        )),
+        routes: createSubRoutes(
+          dataService,
+          2,
+          (responsiveService, selectedListId) => TemplatesPage(dataService: dataService, selectedListId: selectedListId, responsiveService: responsiveService),
+          '/templates/'),
       ),
       GoRoute(
         path: '/archived',
-        builder: (context, state) => ResponsiveScaffold(
+        builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          responsiveService: responsiveService,
           selectedIndex: 3,
           children: [
-            ArchivedListsPage(dataService: dataService),
+            ArchivedListsPage(dataService: dataService, responsiveService: responsiveService),
           ],
-        ),
-        routes: createSubRoutes(dataService, 2, (selectedListId) => ArchivedListsPage(dataService: dataService, selectedListId: selectedListId), '/archived/'),
+        )),
+        routes: createSubRoutes(
+          dataService,
+          3,
+          (responsiveService, selectedListId) => ArchivedListsPage(dataService: dataService, selectedListId: selectedListId, responsiveService: responsiveService),
+          '/archived/'),
       ),
       GoRoute(
         path: '/login',

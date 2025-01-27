@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import 'services/rest_data_service.dart';
+import 'services/responsive_service.dart';
 import 'router.dart';
 
 void main() {

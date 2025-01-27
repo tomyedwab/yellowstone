@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 import '../services/rest_data_service.dart';
 import '../models/task_list.dart';
 import 'task_list_view.dart';
+import '../services/responsive_service.dart';
 
 class ArchivedListsPage extends StatefulWidget {
   final RestDataService dataService;
   final int? selectedListId;
-  const ArchivedListsPage({super.key, required this.dataService, this.selectedListId});
+  final ResponsiveService responsiveService;
+  const ArchivedListsPage({super.key, required this.dataService, this.selectedListId, required this.responsiveService});
 
   @override
   State<ArchivedListsPage> createState() => _ArchivedListsPageState();
@@ -47,51 +49,44 @@ class _ArchivedListsPageState extends State<ArchivedListsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final taskLists = _taskLists;
-
     // TODO: Sort tasks by category and add headings
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Archived Lists'),
-      ),
-      body: ListView.builder(
-        itemCount: taskLists.length,
-        itemBuilder: (context, index) {
-          final taskList = taskLists[index];
-          return Container(
-            key: ValueKey(taskList.id),
-            margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
-            decoration: BoxDecoration(
-              color: widget.selectedListId != null && widget.selectedListId == taskList.id ? const Color.fromARGB(255, 49, 65, 80) : null,
-              borderRadius: BorderRadius.circular(8),
-              border: const Border(
-                bottom: BorderSide(
-                  color: Color(0xff182631),
-                  width: 1.5,
+    return ListView.builder(
+      itemCount: _taskLists.length,
+      itemBuilder: (context, index) {
+        final taskList = _taskLists[index];
+        return Container(
+          key: ValueKey(taskList.id),
+          margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
+          decoration: BoxDecoration(
+            color: widget.selectedListId != null && widget.selectedListId == taskList.id ? const Color.fromARGB(255, 49, 65, 80) : null,
+            borderRadius: BorderRadius.circular(8),
+            border: const Border(
+              bottom: BorderSide(
+                color: Color(0xff182631),
+                width: 1.5,
+              ),
+            ),
+          ),
+          child: ListTile(
+            title: Text(taskList.title),
+            subtitle: Text('${taskList.taskIds.length} tasks'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.unarchive),
+                  onPressed: () {
+                    widget.dataService.unarchiveTaskList(taskList.id);
+                  },
                 ),
-              ),
+              ],
             ),
-            child: ListTile(
-              title: Text(taskList.title),
-              subtitle: Text('${taskList.taskIds.length} tasks'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.unarchive),
-                    onPressed: () {
-                      widget.dataService.unarchiveTaskList(taskList.id);
-                    },
-                  ),
-                ],
-              ),
-              onTap: () {
-                context.go('/archived/list/${taskList.id}');
-              },
-            ),
-          );
-        },
-      ),
+            onTap: () {
+              context.go('/archived/list/${taskList.id}');
+            },
+          ),
+        );
+      },
     );
   }
 }

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/responsive_service.dart';
 
 class ResponsiveScaffold extends StatelessWidget {
   final List<Widget> children;
   final int selectedIndex;
+  final ResponsiveService responsiveService;
 
-  const ResponsiveScaffold({super.key, required this.children, required this.selectedIndex});
+  const ResponsiveScaffold({super.key, required this.children, required this.selectedIndex, required this.responsiveService});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 860) {
+        if (responsiveService.layoutType == LayoutType.vertical) {
           return Scaffold(
             body: children[children.length - 1],
             bottomNavigationBar: NavigationBar(
@@ -94,27 +96,27 @@ class ResponsiveScaffold extends StatelessWidget {
                 ],
               ),
               // First column
-              SizedBox(
-                width: 250,
+              children.length > 1 ? SizedBox(
+                width: 300,
                 child: Scaffold(
                   body: children[0],
                 ),
-              ),
+              ) : Expanded(child: children[0]),
               if (children.length > 1) ...[
                 const VerticalDivider(
                   width: 1,
-                  thickness: 1,
+                  thickness: 2,
                   color: Color(0xff182631),
                 ),
-                SizedBox(
+                children.length > 2 ? SizedBox(
                   width: 350,
                   child: children[1],
-                ),
+                ) : Expanded(child: children[1]),
               ],
               if (children.length > 2) ...[
                 const VerticalDivider(
                   width: 1,
-                  thickness: 1,
+                  thickness: 2,
                   color: Color(0xff182631),
                 ),
                 Expanded(

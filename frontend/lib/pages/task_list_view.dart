@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/rest_data_service.dart';
+import '../services/responsive_service.dart';
 import '../widgets/task_list_widget.dart';
 import '../models/task_list.dart';
-import '../models/task.dart';
 
 class TaskListView extends StatefulWidget {
   final RestDataService dataService;
+  final ResponsiveService responsiveService;  
   final int taskListId;
   final String taskListPrefix;
   final int? selectedTaskId;
@@ -13,6 +14,7 @@ class TaskListView extends StatefulWidget {
   const TaskListView({
     super.key,
     required this.dataService,
+    required this.responsiveService,
     required this.taskListId,
     required this.taskListPrefix,
     required this.selectedTaskId,
@@ -128,87 +130,120 @@ class _TaskListViewState extends State<TaskListView> {
     }
     
     final taskList = _taskList!;
+
+    final icons = [
+      if (_isSelectionMode) ...[
+        IconButton(
+          icon: const Icon(Icons.library_add),
+          onPressed: () => _showListSelectionDialog(isCopy: true),
+          tooltip: 'Add to another list',
+        ),
+        IconButton(
+          icon: const Icon(Icons.drive_file_move),
+          onPressed: () => _showListSelectionDialog(isCopy: false),
+          tooltip: 'Move to another list',
+        ),
+      ],
+      IconButton(
+        icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
+        onPressed: _toggleSelectionMode,
+        tooltip: _isSelectionMode ? 'Exit selection mode' : 'Enter selection mode',
+      ),
+      if (!_isSelectionMode) ...[
+        IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Rename List'),
+                content: TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter new title',
+                  ),
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty) {
+                      widget.dataService.updateTaskListTitle(
+                        taskList.id,
+                        value,
+                      );
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('CANCEL'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        IconButton(
+          icon: Icon(taskList.archived ? Icons.unarchive : Icons.archive),
+          onPressed: () {
+            if (taskList.archived) {
+              widget.dataService.unarchiveTaskList(taskList.id);
+              // TODO: Navigate to Lists page
+            } else {
+              widget.dataService.archiveTaskList(taskList.id);
+              // TODO: Navigate to ArchivedListsPage
+            }
+          },
+        ),
+      ],
+    ];
+
+    final body = TaskListWidget(
+      key: ValueKey('taskListWidget-${widget.taskListId}'),
+      dataService: widget.dataService,
+      responsiveService: widget.responsiveService,
+      taskListId: widget.taskListId,
+      taskListPrefix: widget.taskListPrefix,
+      selectedTaskId: widget.selectedTaskId,
+      isSelectionMode: _isSelectionMode,
+      selectedTaskIds: _selectedTaskIds,
+      onTaskSelectionChanged: _toggleTaskSelection,
+    );
     
+    if (widget.responsiveService.layoutType == LayoutType.horizontal) {
+      return Scaffold(
+        body: Column(children: [
+          Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  _taskList!.title,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              const Spacer(),
+              ...icons,
+            ],
+          ),
+          
+          Expanded(child: body),
+        ],),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
-        actions: [
-          if (_isSelectionMode) ...[
-            IconButton(
-              icon: const Icon(Icons.library_add),
-              onPressed: () => _showListSelectionDialog(isCopy: true),
-              tooltip: 'Add to another list',
-            ),
-            IconButton(
-              icon: const Icon(Icons.drive_file_move),
-              onPressed: () => _showListSelectionDialog(isCopy: false),
-              tooltip: 'Move to another list',
-            ),
-          ],
-          IconButton(
-            icon: Icon(_isSelectionMode ? Icons.close : Icons.checklist),
-            onPressed: _toggleSelectionMode,
-            tooltip: _isSelectionMode ? 'Exit selection mode' : 'Enter selection mode',
+        actions: icons,
+      ),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            _taskList!.title,
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
-          if (!_isSelectionMode) ...[
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Rename List'),
-                    content: TextField(
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter new title',
-                      ),
-                      onSubmitted: (value) {
-                        if (value.isNotEmpty) {
-                          widget.dataService.updateTaskListTitle(
-                            taskList.id,
-                            value,
-                          );
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('CANCEL'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(taskList.archived ? Icons.unarchive : Icons.archive),
-              onPressed: () {
-                if (taskList.archived) {
-                  widget.dataService.unarchiveTaskList(taskList.id);
-                  // TODO: Navigate to Lists page
-                } else {
-                  widget.dataService.archiveTaskList(taskList.id);
-                  // TODO: Navigate to ArchivedListsPage
-                }
-              },
-            ),
-          ],
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: TaskListWidget(
-          key: ValueKey('taskListWidget-${widget.taskListId}'),
-          dataService: widget.dataService,
-          taskListId: widget.taskListId,
-          taskListPrefix: widget.taskListPrefix,
-          selectedTaskId: widget.selectedTaskId,
-          isSelectionMode: _isSelectionMode,
-          selectedTaskIds: _selectedTaskIds,
-          onTaskSelectionChanged: _toggleTaskSelection,
         ),
-      ),
+        Expanded(child: body),
+      ],),
     );
   }
 }

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import '../models/task_list.dart';
 import '../models/task.dart';
 import '../services/rest_data_service.dart';
+import '../services/responsive_service.dart';
 import 'task_card.dart';
 import 'new_task_card.dart';
 
 class TaskListWidget extends StatefulWidget {
   final RestDataService dataService;
+  final ResponsiveService responsiveService;
   final int taskListId;
   final String taskListPrefix;
   final bool isSelectionMode;
@@ -17,6 +19,7 @@ class TaskListWidget extends StatefulWidget {
   const TaskListWidget({
     super.key,
     required this.dataService,
+    required this.responsiveService,
     required this.taskListId,
     required this.taskListPrefix,
     this.isSelectionMode = false,
@@ -87,16 +90,11 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final bottomBoxSize = (widget.responsiveService.layoutType == LayoutType.horizontal) ? 144 : 280;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            _taskList!.title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ),
         if (widget.isSelectionMode)
           Column(
             children: [
@@ -125,7 +123,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
           )
         else
           SizedBox(
-            height: MediaQuery.of(context).size.height - 200, // Adjust this value as needed
+            height: MediaQuery.of(context).size.height - bottomBoxSize, // Adjust this value as needed
             child: ReorderableListView(
               onReorder: (oldIndex, newIndex) {
                 if (oldIndex < newIndex) {
