@@ -43,6 +43,7 @@ class RestDataService extends ChangeNotifier {
   }
   
   int _currentEventId = 0;
+  String _currentServerVersion = '';
   bool _isPolling = false;
   bool get isPolling => _isPolling;
 
@@ -472,6 +473,7 @@ class RestDataService extends ChangeNotifier {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           _currentEventId = data['id'];
+          _currentServerVersion = data['version'];
           notifyListeners();
         } else if (response.statusCode != 304) {
           // If not a "Not Modified" response, wait a bit before retrying
@@ -483,6 +485,8 @@ class RestDataService extends ChangeNotifier {
       }
     }
   }
+
+  String get serverVersion => _currentServerVersion;
 
   Future<List<TaskList>> getAllTaskLists() async {
     final response = await _getCachedResponse('$baseUrl/tasklist/all');

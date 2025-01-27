@@ -1,18 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../services/responsive_service.dart';
+import '../services/rest_data_service.dart';
 
 class ResponsiveScaffold extends StatelessWidget {
   final List<Widget> children;
   final int selectedIndex;
+  final RestDataService restDataService;
   final ResponsiveService responsiveService;
 
-  const ResponsiveScaffold({super.key, required this.children, required this.selectedIndex, required this.responsiveService});
+  const ResponsiveScaffold({super.key, required this.children, required this.selectedIndex, required this.restDataService, required this.responsiveService});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final listIcon = GestureDetector(
+          onLongPress: () async {
+            PackageInfo packageInfo = await PackageInfo.fromPlatform();
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Yellowstone'),
+                content: Text('Client version ${packageInfo.version}\nServer version ${restDataService.serverVersion}'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          },
+          child: const Icon(Icons.list),
+        );
         if (responsiveService.layoutType == LayoutType.vertical) {
           return Scaffold(
             body: children[children.length - 1],
@@ -30,20 +52,20 @@ class ResponsiveScaffold extends StatelessWidget {
                 }
               },
               selectedIndex: selectedIndex,
-              destinations: const <NavigationDestination>[
+              destinations: <NavigationDestination>[
                 NavigationDestination(
-                  icon: Icon(Icons.list),
+                  icon: listIcon,
                   label: 'Lists',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.label),
                   label: 'Labels',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.copy_all),
                   label: 'Templates',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.archive),
                   label: 'Archived',
                 ),
@@ -72,23 +94,23 @@ class ResponsiveScaffold extends StatelessWidget {
                   }
                 },
                 selectedIndex: selectedIndex,
-                destinations: const <NavigationRailDestination>[
+                destinations: <NavigationRailDestination>[
                   NavigationRailDestination(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    icon: Icon(Icons.list),
+                    icon: listIcon,
                     label: Text('Lists'),
                   ),
-                  NavigationRailDestination(
+                  const NavigationRailDestination(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     icon: Icon(Icons.label),
                     label: Text('Labels'),
                   ),
-                  NavigationRailDestination(
+                  const NavigationRailDestination(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     icon: Icon(Icons.copy_all),
                     label: Text('Templates'),
                   ),
-                  NavigationRailDestination(
+                  const NavigationRailDestination(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     icon: Icon(Icons.archive),
                     label: Text('Archived'),

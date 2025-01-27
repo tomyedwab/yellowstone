@@ -9,8 +9,10 @@ import (
 	"tomyedwab.com/yellowstone-server/state"
 )
 
+const Version = "0.0.0"
+
 func main() {
-	db, err := database.Connect("sqlite3", "yellowstone.db", map[string]database.EventUpdateHandler{
+	db, err := database.Connect("sqlite3", "yellowstone.db", Version, map[string]database.EventUpdateHandler{
 		"task_list_v1":    state.TaskListDBHandleEvent,
 		"task_v1":         state.TaskDBHandleEvent,
 		"task_to_list_v1": state.TaskToListDBHandleEvent,

@@ -21,6 +21,7 @@ List<GoRoute> createSubRoutes(
     GoRoute(
       path: 'list/:listId',
       builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+        restDataService: dataService,
         responsiveService: responsiveService,
         selectedIndex: selectedIndex,
         children: [
@@ -39,6 +40,7 @@ List<GoRoute> createSubRoutes(
         GoRoute(
           path: 'task/:taskId/history',
           builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+            restDataService: dataService,
             responsiveService: responsiveService,
             selectedIndex: selectedIndex,
             children: [
@@ -71,6 +73,7 @@ GoRouter createRouter(RestDataService dataService) {
       GoRoute(
         path: '/',
         builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          restDataService: dataService,
           responsiveService: responsiveService,
           selectedIndex: 0,
           children: [
@@ -86,6 +89,7 @@ GoRouter createRouter(RestDataService dataService) {
       GoRoute(
         path: '/labels',
         builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          restDataService: dataService,
           responsiveService: responsiveService,
           selectedIndex: 1,
           children: [
@@ -101,6 +105,7 @@ GoRouter createRouter(RestDataService dataService) {
       GoRoute(
         path: '/templates',
         builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          restDataService: dataService,
           responsiveService: responsiveService,
           selectedIndex: 2,
           children: [
@@ -116,6 +121,7 @@ GoRouter createRouter(RestDataService dataService) {
       GoRoute(
         path: '/archived',
         builder: (context, state) => withResponsiveService(context, (responsiveService) => ResponsiveScaffold(
+          restDataService: dataService,
           responsiveService: responsiveService,
           selectedIndex: 3,
           children: [

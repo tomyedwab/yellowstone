@@ -34,11 +34,12 @@ type Database struct {
 	db             *sqlx.DB
 	latestVersions map[string]int
 	handlers       map[string]EventUpdateHandler
+	version        string
 }
 
 // Connect creates a new database connection and initializes the database
 // schema.
-func Connect(driverName string, dataSourceName string, handlers map[string]EventUpdateHandler) (*Database, error) {
+func Connect(driverName string, dataSourceName string, version string, handlers map[string]EventUpdateHandler) (*Database, error) {
 	db, err := sqlx.Connect(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
@@ -89,10 +90,13 @@ func Connect(driverName string, dataSourceName string, handlers map[string]Event
 		fmt.Printf("Latest version of %s: %d\n", v.Type, v.Version)
 	}
 
+	fmt.Printf("Initialized application version: %s\n", version)
+
 	return &Database{
 		db:             db,
 		latestVersions: versionMap,
 		handlers:       handlers,
+		version:        version,
 	}, nil
 }
 

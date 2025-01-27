@@ -114,7 +114,10 @@ func (db *Database) InitHandlers(mapper events.MapEventType) {
 			if !waitForEventId(w, r, eventState) {
 				return
 			}
-			HandleAPIResponse(w, r, map[string]interface{}{"id": eventState.CurrentEventId}, nil)
+			HandleAPIResponse(w, r, map[string]interface{}{
+				"id":      eventState.CurrentEventId,
+				"version": db.version,
+			}, nil)
 		},
 	))
 
