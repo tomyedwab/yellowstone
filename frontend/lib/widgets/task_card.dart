@@ -12,6 +12,7 @@ class TaskCard extends StatefulWidget {
   final Task task;
   final int taskListId;
   final String taskListPrefix;
+  final List<TaskLabel>? labels;
   final TaskListCategory category;
   final VoidCallback? onComplete;
   final VoidCallback? onReorder;
@@ -30,6 +31,7 @@ class TaskCard extends StatefulWidget {
     required this.taskListId,
     required this.taskListPrefix,
     required this.category,
+    required this.labels,
     this.onComplete,
     this.onReorder,
     this.isDragging = false,
@@ -86,6 +88,7 @@ class _TaskCardState extends State<TaskCard> {
 
   @override
   Widget build(BuildContext context) {
+    final labels = widget.labels ?? [];
     return Container(
       margin: const EdgeInsets.only(left: 16.0, right: 32.0, top: 4.0, bottom: 4.0),
       decoration: BoxDecoration(
@@ -145,7 +148,7 @@ class _TaskCardState extends State<TaskCard> {
                   ),
                 ),
             ),
-          subtitle: widget.task.completedAt != null || widget.task.dueDate != null || widget.recentComment != null
+          subtitle: widget.task.completedAt != null || widget.task.dueDate != null || widget.recentComment != null || labels.isNotEmpty
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -173,6 +176,30 @@ class _TaskCardState extends State<TaskCard> {
                         fontSize: 14,
                         fontStyle: FontStyle.italic
                       ),
+                    ),
+                  if (labels.isNotEmpty)
+                    Wrap(
+                      spacing: 4,
+                      children: labels.map((label) => GestureDetector(
+                        onTap: () {
+                          context.go('/labels/list/${label.listId}');
+                        },
+                        child: Chip(
+                          label: Text(
+                            label.label,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                          backgroundColor: Colors.black26,
+                          visualDensity: VisualDensity.compact,
+                          side: const BorderSide(
+                            width: 0.5,
+                            color: Colors.white30,
+                          ),
+                        ),
+                      )).toList(),
                     ),
                 ],
               )

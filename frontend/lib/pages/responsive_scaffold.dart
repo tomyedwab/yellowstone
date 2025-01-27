@@ -20,8 +20,10 @@ class ResponsiveScaffold extends StatelessWidget {
                 if (index == 0) {
                   context.go('/');
                 } else if (index == 1) {
-                  context.go('/templates');
+                  context.go('/labels');
                 } else if (index == 2) {
+                  context.go('/templates');
+                } else if (index == 3) {
                   context.go('/archived');
                 }
               },
@@ -30,6 +32,10 @@ class ResponsiveScaffold extends StatelessWidget {
                 NavigationDestination(
                   icon: Icon(Icons.list),
                   label: 'Lists',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.label),
+                  label: 'Labels',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.copy_all),
@@ -56,8 +62,10 @@ class ResponsiveScaffold extends StatelessWidget {
                   if (index == 0) {
                     context.go('/');
                   } else if (index == 1) {
-                    context.go('/templates');
+                    context.go('/labels');
                   } else if (index == 2) {
+                    context.go('/templates');
+                  } else if (index == 3) {
                     context.go('/archived');
                   }
                 },
@@ -67,6 +75,11 @@ class ResponsiveScaffold extends StatelessWidget {
                     padding: EdgeInsets.symmetric(vertical: 8),
                     icon: Icon(Icons.list),
                     label: Text('Lists'),
+                  ),
+                  NavigationRailDestination(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    icon: Icon(Icons.label),
+                    label: Text('Labels'),
                   ),
                   NavigationRailDestination(
                     padding: EdgeInsets.symmetric(vertical: 8),

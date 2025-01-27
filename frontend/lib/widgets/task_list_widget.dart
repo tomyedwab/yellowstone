@@ -34,6 +34,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
   List<Task> _tasks = [];
   Map<int, TaskRecentComment>? _recentComments;
   TaskList? _taskList = null;
+  Map<int, List<TaskLabel>> _taskLabels = {};
 
   @override
   void initState() {
@@ -57,10 +58,21 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       final tasks = await widget.dataService.getTasksForList(widget.taskListId);
       final recentComments = await widget.dataService.getTaskListRecentComments(widget.taskListId); 
       final taskList = await widget.dataService.getTaskListById(widget.taskListId);
+      final taskLabels = await widget.dataService.getTaskLabels(widget.taskListId);
       setState(() {
         _tasks = tasks;
         _recentComments = Map.fromEntries(recentComments.map((comment) => MapEntry(comment.taskId, comment)));
         _taskList = taskList;
+        _taskLabels = taskLabels
+          .where((label) => label.listId != widget.taskListId)
+          .fold<Map<int, List<TaskLabel>>>(
+            {},
+            (map, label) => map..update(
+              label.taskId,
+              (labels) => [...labels, label],
+              ifAbsent: () => [label],
+            ),
+          );
         _isLoading = false;
       });
     } catch (e) {
@@ -96,6 +108,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   taskListId: widget.taskListId,
                   taskListPrefix: widget.taskListPrefix,
                   category: _taskList!.category,
+                  labels: _taskLabels[task.id],
                   recentComment: _recentComments?[task.id],
                   onComplete: () {
                     widget.dataService.markTaskComplete(
@@ -134,6 +147,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                       taskListId: widget.taskListId,
                       taskListPrefix: widget.taskListPrefix,
                       category: _taskList!.category,
+                      labels: _taskLabels[task.id],
                       recentComment: _recentComments?[task.id],
                       onComplete: () {
                         widget.dataService.markTaskComplete(

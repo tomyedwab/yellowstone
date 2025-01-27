@@ -1,5 +1,6 @@
 
 enum TaskListCategory {
+  label,
   template,
   toDoList,
 }

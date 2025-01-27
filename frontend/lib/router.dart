@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'pages/archived_lists_page.dart';
 import 'pages/responsive_scaffold.dart';
 import 'pages/todo_lists_page.dart';
 import 'pages/task_list_view.dart';
 import 'pages/task_history_page.dart';
 import 'pages/templates_page.dart';
-import 'pages/archived_lists_page.dart';
+import 'pages/labels_page.dart';
 import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
 
@@ -67,9 +68,19 @@ GoRouter createRouter(RestDataService dataService) {
         routes: createSubRoutes(dataService, 0, (selectedListId) => ToDoListsPage(dataService: dataService, selectedListId: selectedListId), '/'),
       ),
       GoRoute(
-        path: '/templates',
+        path: '/labels',
         builder: (context, state) => ResponsiveScaffold(
           selectedIndex: 1,
+          children: [
+            LabelsPage(dataService: dataService),
+          ],
+        ),
+        routes: createSubRoutes(dataService, 1, (selectedListId) => LabelsPage(dataService: dataService, selectedListId: selectedListId), '/labels/'),
+      ),
+      GoRoute(
+        path: '/templates',
+        builder: (context, state) => ResponsiveScaffold(
+          selectedIndex: 2,
           children: [
             TemplatesPage(dataService: dataService),
           ],
@@ -79,7 +90,7 @@ GoRouter createRouter(RestDataService dataService) {
       GoRoute(
         path: '/archived',
         builder: (context, state) => ResponsiveScaffold(
-          selectedIndex: 2,
+          selectedIndex: 3,
           children: [
             ArchivedListsPage(dataService: dataService),
           ],

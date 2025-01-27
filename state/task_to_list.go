@@ -185,6 +185,14 @@ WHERE ttl.list_id = $1 AND lc.user_comment IS NOT NULL
 ORDER BY ttl.position;
 `
 
+const getTaskLabelsForListV1Sql = `
+SELECT ttl1.task_id, ttl2.list_id, tl.title AS label
+FROM task_to_list_v1 ttl1
+LEFT JOIN task_to_list_v1 ttl2 ON ttl1.task_id = ttl2.task_id
+LEFT JOIN task_list_v1 tl ON ttl2.list_id = tl.id
+WHERE ttl1.list_id = $1 AND tl.category = 'label'
+`
+
 type TaskListMetadataV1 struct {
 	ListId    int `db:"list_id"`
 	Total     int `db:"total"`
@@ -196,6 +204,12 @@ type TaskRecentCommentV1 struct {
 	TaskId      int        `db:"task_id"`
 	UserComment *string    `db:"user_comment"`
 	CreatedAt   *time.Time `db:"created_at"`
+}
+
+type TaskLabelsV1 struct {
+	TaskId int    `db:"task_id"`
+	Label  string `db:"label"`
+	ListId int    `db:"list_id"`
 }
 
 func taskDBForList(db *sqlx.DB, listId int) (TaskV1Response, error) {
@@ -214,4 +228,10 @@ func taskListDBRecentComments(db *sqlx.DB, listId int) ([]TaskRecentCommentV1, e
 	var comments []TaskRecentCommentV1 = make([]TaskRecentCommentV1, 0)
 	err := db.Select(&comments, getRecentCommentsForListV1Sql, listId)
 	return comments, err
+}
+
+func taskListDBGetAllTaskLabels(db *sqlx.DB, listId int) ([]TaskLabelsV1, error) {
+	var labels []TaskLabelsV1 = make([]TaskLabelsV1, 0)
+	err := db.Select(&labels, getTaskLabelsForListV1Sql, listId)
+	return labels, err
 }

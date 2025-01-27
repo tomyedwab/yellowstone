@@ -31,3 +31,11 @@ class TaskRecentComment {
     required this.createdAt,
   });
 }
+
+class TaskLabel {
+  final int taskId;
+  final String label;
+  final int listId;
+
+  TaskLabel({required this.taskId, required this.label, required this.listId});
+}

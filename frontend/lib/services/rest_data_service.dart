@@ -197,12 +197,14 @@ class RestDataService extends ChangeNotifier {
     switch (category.toLowerCase()) {
       case 'todolist':
         return TaskListCategory.toDoList;
+      case 'label':
+        return TaskListCategory.label;
       case 'template':
         return TaskListCategory.template;
       default:
         throw Exception('Unknown category: $category');
     }
-    }
+  }
 
   Future<TaskList> getTaskListById(int taskListId) async {
     // Get the task list details
@@ -318,6 +320,19 @@ class RestDataService extends ChangeNotifier {
       taskId: json['TaskId'],
       userComment: json['UserComment'],
       createdAt: DateTime.parse(json['CreatedAt']),
+    )).toList();
+  }
+
+  Future<List<TaskLabel>> getTaskLabels(int taskListId) async {
+    final response = await _getCachedResponse('$baseUrl/tasklist/labels?listId=$taskListId');
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load task labels');
+    }
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => TaskLabel(
+      taskId: json['TaskId'],
+      label: json['Label'],
+      listId: json['ListId'],
     )).toList();
   }
 
