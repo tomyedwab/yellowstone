@@ -27,12 +27,6 @@ class ResponsiveService {
     kIsWeb ? 160 : 216
   );
 
-  double get tasksViewBottomBoxSize => _layoutType == LayoutType.horizontal ? (
-    kIsWeb ? 144 : 180
-  ) : (
-    kIsWeb ? 280 : 328
-  );
-
   bool get reorderableHandlesVisible => kIsWeb;
 }
 

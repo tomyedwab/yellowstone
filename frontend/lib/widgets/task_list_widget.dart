@@ -90,14 +90,16 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.isSelectionMode)
-          SizedBox(
-            height: MediaQuery.of(context).size.height - widget.responsiveService.tasksViewBottomBoxSize,
-            child: SingleChildScrollView(
-              child: Column(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 8.0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.isSelectionMode)
+              Column(
                 children: [
                   for (final task in _tasks)
                     TaskCard(
@@ -123,23 +125,21 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                     ),
                 ],
               )
-            )
-          )
-        else
-          SizedBox(
-            height: MediaQuery.of(context).size.height - widget.responsiveService.tasksViewBottomBoxSize,
-            child: ReorderableListView(
-              onReorder: (oldIndex, newIndex) {
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
-                widget.dataService.reorderTasks(
-                  _taskList!.id,
-                  _tasks[oldIndex].id,
-                  newIndex == 0 ? null : _tasks[newIndex - 1].id,
-                );
-              },
-              children: [
+            else
+              ReorderableListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                onReorder: (oldIndex, newIndex) {
+                  if (oldIndex < newIndex) {
+                    newIndex -= 1;
+                  }
+                  widget.dataService.reorderTasks(
+                    _taskList!.id,
+                    _tasks[oldIndex].id,
+                    newIndex == 0 ? null : _tasks[newIndex - 1].id,
+                  );
+                },
+                children: [
                 for (final task in _tasks)
                   KeyedSubtree(
                     key: ValueKey(task.id),
@@ -166,13 +166,14 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   ),
               ],
             ),
-          ),
-        if (!widget.isSelectionMode)
-          NewTaskCard(
-            dataService: widget.dataService,
-            taskListId: _taskList!.id,
-          ),
-      ],
+            if (!widget.isSelectionMode)
+              NewTaskCard(
+                dataService: widget.dataService,
+                taskListId: _taskList!.id,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

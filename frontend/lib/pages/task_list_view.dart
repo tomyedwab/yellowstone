@@ -211,6 +211,7 @@ class _TaskListViewState extends State<TaskListView> {
     
     if (widget.responsiveService.layoutType == LayoutType.horizontal) {
       return Scaffold(
+        resizeToAvoidBottomInset: true,
         body: Column(children: [
           Row(
             children: [
@@ -231,6 +232,7 @@ class _TaskListViewState extends State<TaskListView> {
       );
     }
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         actions: icons,
       ),
