@@ -506,10 +506,11 @@ class RestDataService extends ChangeNotifier {
     )).toList();
   }
 
-  Future<void> moveTasksToList(Set<int> taskIds, int newListId) async {
+  Future<void> moveTasksToList(Set<int> taskIds, int oldListId, int newListId) async {
     await doPublishRequest({
       'type': 'yellowstone:moveTasks',
       'taskIds': taskIds.toList(),
+      'oldListId': oldListId,
       'newListId': newListId,
     });
     _currentEventId++;

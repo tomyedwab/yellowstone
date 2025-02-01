@@ -101,7 +101,7 @@ class _TaskListViewState extends State<TaskListView> {
                   if (isCopy) {
                     widget.dataService.copyTasksToList(_selectedTaskIds, list.id);
                   } else {
-                    widget.dataService.moveTasksToList(_selectedTaskIds, list.id);
+                    widget.dataService.moveTasksToList(_selectedTaskIds, widget.taskListId, list.id);
                   }
                   Navigator.pop(context);
                   _toggleSelectionMode();

@@ -32,6 +32,7 @@ type MoveTasksEvent struct {
 	events.GenericEvent
 
 	TaskIds   []int `db:"task_ids"`
+	OldListId int   `db:"old_list_id"`
 	NewListId int   `db:"new_list_id"`
 }
 
@@ -54,7 +55,8 @@ type ReorderTasksEvent struct {
 const insertTaskToListV1Sql = `
 INSERT INTO task_to_list_v1 (task_id, list_id, position)
 SELECT :task_id, :list_id, COALESCE(MAX(position), 0) + 1
-FROM task_to_list_v1 WHERE list_id = :list_id;
+FROM task_to_list_v1 WHERE list_id = :list_id
+ON CONFLICT (task_id, list_id) DO NOTHING;
 `
 
 const deleteTaskToListV1Sql = `
@@ -62,15 +64,16 @@ DELETE FROM task_to_list_v1
 WHERE task_id = :task_id;
 `
 
+const moveTaskFromListV1Sql = `
+DELETE FROM task_to_list_v1
+WHERE task_id = :task_id AND list_id = :old_list_id;
+`
+
 const moveTaskToListV1Sql = `
-UPDATE task_to_list_v1
-SET list_id = :new_list_id,
-    position = (
-        SELECT COALESCE(MAX(position), 0) + 1
-        FROM task_to_list_v1
-        WHERE list_id = :new_list_id
-    )
-WHERE task_id = :task_id;
+INSERT INTO task_to_list_v1 (task_id, list_id, position)
+SELECT :task_id, :new_list_id, COALESCE(MAX(position), 0) + 1
+FROM task_to_list_v1 WHERE list_id = :new_list_id
+ON CONFLICT (task_id, list_id) DO NOTHING;
 `
 
 const reorderTasksV1Sql = `
@@ -116,9 +119,19 @@ func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 		return true, err
 
 	case *MoveTasksEvent:
-		fmt.Printf("TaskToList v1: MoveTasksEvent %d %v to %d\n", evt.Id, evt.TaskIds, evt.NewListId)
+		fmt.Printf("TaskToList v1: MoveTasksEvent %d %v from %d to %d\n", evt.Id, evt.TaskIds, evt.OldListId, evt.NewListId)
 		for _, taskId := range evt.TaskIds {
-			_, err := tx.NamedExec(moveTaskToListV1Sql, map[string]interface{}{
+			// First remove from old list
+			_, err := tx.NamedExec(moveTaskFromListV1Sql, map[string]interface{}{
+				"task_id":     taskId,
+				"old_list_id": evt.OldListId,
+			})
+			if err != nil {
+				return true, err
+			}
+			
+			// Then add to new list
+			_, err = tx.NamedExec(moveTaskToListV1Sql, map[string]interface{}{
 				"task_id":     taskId,
 				"new_list_id": evt.NewListId,
 			})
