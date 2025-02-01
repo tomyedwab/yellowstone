@@ -28,6 +28,7 @@ class _TaskListViewState extends State<TaskListView> {
   TaskList? _taskList;
   bool _isSelectionMode = false;
   final Set<int> _selectedTaskIds = {};
+  final GlobalKey<TaskListWidgetState> _taskListKey = GlobalKey();
 
   @override
   void initState() {
@@ -134,6 +135,11 @@ class _TaskListViewState extends State<TaskListView> {
     final icons = [
       if (_isSelectionMode) ...[
         IconButton(
+          icon: const Icon(Icons.select_all),
+          onPressed: _showBatchSelectionDialog,
+          tooltip: 'Batch select',
+        ),
+        IconButton(
           icon: const Icon(Icons.library_add),
           onPressed: () => _showListSelectionDialog(isCopy: true),
           tooltip: 'Add to another list',
@@ -198,7 +204,7 @@ class _TaskListViewState extends State<TaskListView> {
     ];
 
     final body = TaskListWidget(
-      key: ValueKey('taskListWidget-${widget.taskListId}'),
+      key: _taskListKey,
       dataService: widget.dataService,
       responsiveService: widget.responsiveService,
       taskListId: widget.taskListId,
@@ -247,5 +253,91 @@ class _TaskListViewState extends State<TaskListView> {
         Expanded(child: body),
       ],),
     );
+  }
+
+  Future<void> _showBatchSelectionDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Batch Selection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.select_all),
+              title: const Text('Select all'),
+              onTap: () {
+                _selectAllTasks();
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.check_circle),
+              title: const Text('Select completed'),
+              onTap: () {
+                _selectCompletedTasks();
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.radio_button_unchecked),
+              title: const Text('Select uncompleted'),
+              onTap: () {
+                _selectUncompletedTasks();
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.clear_all),
+              title: const Text('Select none'),
+              onTap: () {
+                _clearSelection();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectAllTasks() {
+    final tasks = _taskListKey.currentState?.tasks;
+    if (tasks != null) {
+      setState(() {
+        _selectedTaskIds.clear();
+        _selectedTaskIds.addAll(tasks.map((task) => task.id));
+      });
+    }
+  }
+
+  void _selectCompletedTasks() {
+    final tasks = _taskListKey.currentState?.tasks;
+    if (tasks != null) {
+      setState(() {
+        _selectedTaskIds.clear();
+        _selectedTaskIds.addAll(
+          tasks.where((task) => task.isCompleted).map((task) => task.id),
+        );
+      });
+    }
+  }
+
+  void _selectUncompletedTasks() {
+    final tasks = _taskListKey.currentState?.tasks;
+    if (tasks != null) {
+      setState(() {
+        _selectedTaskIds.clear();
+        _selectedTaskIds.addAll(
+          tasks.where((task) => !task.isCompleted).map((task) => task.id),
+        );
+      });
+    }
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedTaskIds.clear();
+    });
   }
 }

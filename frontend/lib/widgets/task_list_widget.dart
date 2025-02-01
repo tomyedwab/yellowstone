@@ -29,15 +29,17 @@ class TaskListWidget extends StatefulWidget {
   });
 
   @override
-  State<TaskListWidget> createState() => _TaskListWidgetState();
+  State<TaskListWidget> createState() => TaskListWidgetState();
 }
 
-class _TaskListWidgetState extends State<TaskListWidget> {
+class TaskListWidgetState extends State<TaskListWidget> {
   bool _isLoading = true;
   List<Task> _tasks = [];
   Map<int, TaskRecentComment>? _recentComments;
   TaskList? _taskList = null;
   Map<int, List<TaskLabel>> _taskLabels = {};
+
+  List<Task> get tasks => _tasks;
 
   @override
   void initState() {
