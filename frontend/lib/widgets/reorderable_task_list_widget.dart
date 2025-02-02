@@ -32,16 +32,17 @@ class ReorderableTaskListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 8.0,
-        ),
-        child: Column(
-          children: [
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 8.0,
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: ReorderableListView(
+              shrinkWrap: false,
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               onReorder: (oldIndex, newIndex) {
                 if (oldIndex < newIndex) {
                   newIndex -= 1;
@@ -79,12 +80,12 @@ class ReorderableTaskListWidget extends StatelessWidget {
                   ),
               ],
             ),
-            NewTaskCard(
-              dataService: dataService,
-              taskListId: taskListId,
-            ),
-          ],
-        ),
+          ),
+          NewTaskCard(
+            dataService: dataService,
+            taskListId: taskListId,
+          ),
+        ],
       ),
     );
   }

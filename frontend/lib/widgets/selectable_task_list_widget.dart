@@ -33,31 +33,33 @@ class SelectableTaskListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (final task in tasks)
-          TaskCard(
-            key: ValueKey(task.id),
-            dataService: dataService,
-            responsiveService: responsiveService,
-            task: task,
-            taskListId: taskListId,
-            taskListPrefix: taskListPrefix,
-            category: category,
-            labels: taskLabels[task.id],
-            recentComment: recentComments?[task.id],
-            onComplete: () {
-              dataService.markTaskComplete(
-                task.id,
-                !task.isCompleted,
-              );
-            },
-            isSelectionMode: true,
-            isSelected: selectedTaskIds.contains(task.id),
-            isHighlighted: false,
-            onSelectionChanged: (selected) => onTaskSelectionChanged(task.id),
-          ),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          for (final task in tasks)
+            TaskCard(
+              key: ValueKey(task.id),
+              dataService: dataService,
+              responsiveService: responsiveService,
+              task: task,
+              taskListId: taskListId,
+              taskListPrefix: taskListPrefix,
+              category: category,
+              labels: taskLabels[task.id],
+              recentComment: recentComments?[task.id],
+              onComplete: () {
+                dataService.markTaskComplete(
+                  task.id,
+                  !task.isCompleted,
+                );
+              },
+              isSelectionMode: true,
+              isSelected: selectedTaskIds.contains(task.id),
+              isHighlighted: false,
+              onSelectionChanged: (selected) => onTaskSelectionChanged(task.id),
+            ),
+        ],
+      ),
     );
   }
 } 
