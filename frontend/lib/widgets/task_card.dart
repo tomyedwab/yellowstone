@@ -6,7 +6,6 @@ import '../models/task_list.dart';
 import '../services/rest_data_service.dart';
 import '../services/responsive_service.dart';
 import 'task_options_sheet.dart';
-import '../pages/task_history_page.dart';
 
 class TaskCard extends StatefulWidget {
   final RestDataService dataService;
