@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/rest_data_service.dart';
 import '../models/task_list.dart';
-import 'task_list_view.dart';
 import '../services/responsive_service.dart';
 
 class ToDoListsPage extends StatefulWidget {

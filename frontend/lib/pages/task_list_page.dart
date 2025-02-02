@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import '../services/rest_data_service.dart';
 import '../services/responsive_service.dart';
-import '../widgets/task_list_widget.dart';
+import '../widgets/selectable_task_list_widget.dart';
+import '../widgets/reorderable_task_list_widget.dart';
+import '../models/task.dart';
 import '../models/task_list.dart';
 
-class TaskListView extends StatefulWidget {
+class TaskListPage extends StatefulWidget {
   final RestDataService dataService;
   final ResponsiveService responsiveService;  
   final int taskListId;
   final String taskListPrefix;
   final int? selectedTaskId;
 
-  const TaskListView({
+  const TaskListPage({
     super.key,
     required this.dataService,
     required this.responsiveService,
@@ -21,14 +23,17 @@ class TaskListView extends StatefulWidget {
   });
 
   @override
-  State<TaskListView> createState() => _TaskListViewState();
+  State<TaskListPage> createState() => _TaskListPageState();
 }
 
-class _TaskListViewState extends State<TaskListView> {
-  TaskList? _taskList;
+class _TaskListPageState extends State<TaskListPage> {
+  bool _isLoading = true;
+  List<Task> _tasks = [];
+  Map<int, TaskRecentComment>? _recentComments;
+  TaskList? _taskList = null;
+  Map<int, List<TaskLabel>> _taskLabels = {};
   bool _isSelectionMode = false;
   final Set<int> _selectedTaskIds = {};
-  final GlobalKey<TaskListWidgetState> _taskListKey = GlobalKey();
 
   @override
   void initState() {
@@ -68,9 +73,25 @@ class _TaskListViewState extends State<TaskListView> {
 
   Future<void> _loadTaskList() async {
     try {
+      final tasks = await widget.dataService.getTasksForList(widget.taskListId);
+      final recentComments = await widget.dataService.getTaskListRecentComments(widget.taskListId); 
       final taskList = await widget.dataService.getTaskListById(widget.taskListId);
+      final taskLabels = await widget.dataService.getTaskLabels(widget.taskListId);
       setState(() {
+        _tasks = tasks;
+        _recentComments = Map.fromEntries(recentComments.map((comment) => MapEntry(comment.taskId, comment)));
         _taskList = taskList;
+        _taskLabels = taskLabels
+          .where((label) => label.listId != widget.taskListId)
+          .fold<Map<int, List<TaskLabel>>>(
+            {},
+            (map, label) => map..update(
+              label.taskId,
+              (labels) => [...labels, label],
+              ifAbsent: () => [label],
+            ),
+          );
+        _isLoading = false;
       });
     } catch (e) {
       // TODO: Handle error
@@ -122,7 +143,7 @@ class _TaskListViewState extends State<TaskListView> {
 
   @override
   Widget build(BuildContext context) {
-    if (_taskList == null) {
+    if (_isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -203,18 +224,36 @@ class _TaskListViewState extends State<TaskListView> {
       ),
     ];
 
-    final body = TaskListWidget(
-      key: _taskListKey,
-      dataService: widget.dataService,
-      responsiveService: widget.responsiveService,
-      taskListId: widget.taskListId,
-      taskListPrefix: widget.taskListPrefix,
-      selectedTaskId: widget.selectedTaskId,
-      isSelectionMode: _isSelectionMode,
-      selectedTaskIds: _selectedTaskIds,
-      onTaskSelectionChanged: _toggleTaskSelection,
-    );
-    
+    Widget body;
+    if (_isSelectionMode) {
+      body = SelectableTaskListWidget(
+        key: ValueKey('selectable-task-list-${widget.taskListId}'),
+        dataService: widget.dataService,
+        responsiveService: widget.responsiveService,
+        taskListId: widget.taskListId,
+        taskListPrefix: widget.taskListPrefix,
+        tasks: _tasks,
+        category: _taskList!.category,
+        taskLabels: _taskLabels,
+        recentComments: _recentComments,
+        selectedTaskIds: _selectedTaskIds,
+        onTaskSelectionChanged: _toggleTaskSelection,
+      );
+    } else {
+      body = ReorderableTaskListWidget(
+        key: ValueKey('reorderable-task-list-${widget.taskListId}'),
+        dataService: widget.dataService,
+        responsiveService: widget.responsiveService,
+        taskListId: widget.taskListId,
+        taskListPrefix: widget.taskListPrefix,
+        tasks: _tasks,
+        category: _taskList!.category,
+        taskLabels: _taskLabels,
+        recentComments: _recentComments,
+        selectedTaskId: widget.selectedTaskId,
+      );
+    }
+
     if (widget.responsiveService.layoutType == LayoutType.horizontal) {
       return Scaffold(
         resizeToAvoidBottomInset: true,
@@ -302,37 +341,28 @@ class _TaskListViewState extends State<TaskListView> {
   }
 
   void _selectAllTasks() {
-    final tasks = _taskListKey.currentState?.tasks;
-    if (tasks != null) {
-      setState(() {
-        _selectedTaskIds.clear();
-        _selectedTaskIds.addAll(tasks.map((task) => task.id));
-      });
-    }
+    setState(() {
+      _selectedTaskIds.clear();
+      _selectedTaskIds.addAll(_tasks.map((task) => task.id));
+    });
   }
 
   void _selectCompletedTasks() {
-    final tasks = _taskListKey.currentState?.tasks;
-    if (tasks != null) {
-      setState(() {
-        _selectedTaskIds.clear();
-        _selectedTaskIds.addAll(
-          tasks.where((task) => task.isCompleted).map((task) => task.id),
-        );
-      });
-    }
+    setState(() {
+      _selectedTaskIds.clear();
+      _selectedTaskIds.addAll(
+        _tasks.where((task) => task.isCompleted).map((task) => task.id),
+      );
+    });
   }
 
   void _selectUncompletedTasks() {
-    final tasks = _taskListKey.currentState?.tasks;
-    if (tasks != null) {
-      setState(() {
-        _selectedTaskIds.clear();
-        _selectedTaskIds.addAll(
-          tasks.where((task) => !task.isCompleted).map((task) => task.id),
-        );
-      });
-    }
+    setState(() {
+      _selectedTaskIds.clear();
+      _selectedTaskIds.addAll(
+        _tasks.where((task) => !task.isCompleted).map((task) => task.id),
+      );
+    });
   }
 
   void _clearSelection() {

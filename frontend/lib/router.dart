@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'pages/archived_lists_page.dart';
 import 'pages/responsive_scaffold.dart';
 import 'pages/todo_lists_page.dart';
-import 'pages/task_list_view.dart';
+import 'pages/task_list_page.dart';
 import 'pages/task_history_page.dart';
 import 'pages/templates_page.dart';
 import 'pages/labels_page.dart';
@@ -26,8 +26,8 @@ List<GoRoute> createSubRoutes(
         selectedIndex: selectedIndex,
         children: [
           mainPage(responsiveService, int.parse(state.pathParameters['listId']!)),
-          TaskListView(
-            key: ValueKey('taskListView-${state.pathParameters['listId']}-${state.pathParameters['taskId']}'),
+          TaskListPage(
+            key: ValueKey('taskListPage-${state.pathParameters['listId']}-${state.pathParameters['taskId']}'),
             dataService: dataService,
             responsiveService: responsiveService,
             taskListId: int.parse(state.pathParameters['listId']!),
@@ -45,8 +45,8 @@ List<GoRoute> createSubRoutes(
             selectedIndex: selectedIndex,
             children: [
               mainPage(responsiveService, int.parse(state.pathParameters['listId']!)),
-              TaskListView(
-                key: ValueKey('taskListView-${state.pathParameters['listId']}-${state.pathParameters['taskId']}'),
+              TaskListPage(
+                key: ValueKey('taskListPage-${state.pathParameters['listId']}-${state.pathParameters['taskId']}'),
                 dataService: dataService,
                 responsiveService: responsiveService,
                 taskListId: int.parse(state.pathParameters['listId']!),
