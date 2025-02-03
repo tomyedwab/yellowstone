@@ -1,5 +1,5 @@
 serve:
-	ENABLE_CROSS_ORIGIN=1 CLOUDFRONT_SECRET=123 go run main.go
+	ENABLE_CROSS_ORIGIN=1 go run main.go
 
 run-web:
 	cd frontend && flutter run -d chrome

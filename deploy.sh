@@ -26,8 +26,8 @@ sed -i "s/const Version = \".*\"/const Version = \"$NEW_VERSION\"/" main.go
 echo "Building new version: $NEW_VERSION"
 
 # Build frontends
-docker build -t tomyedwab/yellowstone-arm64:${NEW_VERSION} -f Dockerfile.arm64 . && \
-  docker push tomyedwab/yellowstone-arm64:${NEW_VERSION}
+docker build -t tomyedwab/yellowstone:${NEW_VERSION} -f Dockerfile . && \
+  docker push tomyedwab/yellowstone:${NEW_VERSION}
 
 pushd frontend && \
   flutter build web && \

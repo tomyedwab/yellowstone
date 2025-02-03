@@ -94,9 +94,6 @@ class RestDataService extends ChangeNotifier {
     if (needsWebCookies) {
       final cookies = await WebViewCookieJar.cookieJar.loadForRequest(request.url);
       request.headers['Cookie'] = cookies.map((c) => '${c.name}=${c.value}').join('; ');
-    } else {
-      // Use dev secret
-      request.headers['X-CloudFront-Secret'] = '123';
     }
     return request;
   }
@@ -112,9 +109,6 @@ class RestDataService extends ChangeNotifier {
     if (needsWebCookies) {
       final cookies = await WebViewCookieJar.cookieJar.loadForRequest(request.url);
       request.headers['Cookie'] = cookies.map((c) => '${c.name}=${c.value}').join('; ');
-    } else {
-      // Use dev secret
-      request.headers['X-CloudFront-Secret'] = '123';
     }
     request.headers['Content-Type'] = 'application/json';
     event['timestamp'] = DateTime.now().toUtc().toIso8601String();
