@@ -76,6 +76,23 @@ FROM task_to_list_v1 WHERE list_id = :new_list_id
 ON CONFLICT (task_id, list_id) DO NOTHING;
 `
 
+// We can get into situations where multiple tasks have the same position in the
+// list. Repairing just means ordering the tasks by position and then updating
+// the position to be the row number.
+const repairTaskOrderV1Sql = `
+UPDATE task_to_list_v1
+SET position = (
+    SELECT row_num
+    FROM (
+        SELECT task_id, ROW_NUMBER() OVER (ORDER BY position) as row_num
+        FROM task_to_list_v1
+        WHERE list_id = :task_list_id
+    ) numbered
+    WHERE numbered.task_id = task_to_list_v1.task_id
+)
+WHERE list_id = :task_list_id;
+`
+
 const reorderTasksV1Sql = `
 WITH old_task AS (
   SELECT position FROM task_to_list_v1 WHERE task_id = :old_task_id AND list_id = :task_list_id
@@ -129,7 +146,7 @@ func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 			if err != nil {
 				return true, err
 			}
-			
+
 			// Then add to new list
 			_, err = tx.NamedExec(moveTaskToListV1Sql, map[string]interface{}{
 				"task_id":     taskId,
@@ -155,11 +172,19 @@ func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 		return true, nil
 
 	case *ReorderTasksEvent:
-		fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d %d %v\n", evt.Id, evt.TaskListId, evt.OldTaskId, evt.AfterTaskId)
+		_, err := tx.NamedExec(repairTaskOrderV1Sql, map[string]interface{}{
+			"task_list_id": evt.TaskListId,
+		})
+		if err != nil {
+			return true, err
+		}
+
 		if evt.AfterTaskId == nil {
+			fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d %d -> front\n", evt.Id, evt.TaskListId, evt.OldTaskId)
 			_, err := tx.NamedExec(reorderTaskToFrontV1Sql, evt)
 			return true, err
 		} else {
+			fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d %d -> %d\n", evt.Id, evt.TaskListId, evt.OldTaskId, *evt.AfterTaskId)
 			_, err := tx.NamedExec(reorderTasksV1Sql, evt)
 			return true, err
 		}
