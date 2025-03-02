@@ -51,6 +51,13 @@ type ReorderTasksEvent struct {
 	AfterTaskId *int `db:"after_task_id"`
 }
 
+type DuplicateTasksEvent struct {
+	events.GenericEvent
+
+	TaskIds   []int `db:"task_ids"`
+	NewListId int   `db:"new_list_id"`
+}
+
 // Event handler
 const insertTaskToListV1Sql = `
 INSERT INTO task_to_list_v1 (task_id, list_id, position)
@@ -116,6 +123,20 @@ SET position = CASE
   ELSE position + 1
 END
 WHERE list_id = :task_list_id;
+`
+
+const duplicateTaskV1Sql = `
+INSERT INTO task_v1 (title, due_date, completed_at)
+SELECT title, due_date, NULL
+FROM task_v1
+WHERE id = $1
+RETURNING id;
+`
+
+const addDuplicatedTaskToListV1Sql = `
+INSERT INTO task_to_list_v1 (task_id, list_id, position)
+SELECT :task_id, :list_id, COALESCE(MAX(position), 0) + 1
+FROM task_to_list_v1 WHERE list_id = :list_id;
 `
 
 func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
@@ -188,6 +209,27 @@ func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
 			_, err := tx.NamedExec(reorderTasksV1Sql, evt)
 			return true, err
 		}
+
+	case *DuplicateTasksEvent:
+		fmt.Printf("TaskToList v1: DuplicateTasksEvent %d %v to %d\n", evt.Id, evt.TaskIds, evt.NewListId)
+		for _, sourceTaskId := range evt.TaskIds {
+			// First duplicate the task
+			var newTaskId int
+			err := tx.Get(&newTaskId, duplicateTaskV1Sql, sourceTaskId)
+			if err != nil {
+				return true, err
+			}
+
+			// Then add the new task to the target list
+			_, err = tx.NamedExec(addDuplicatedTaskToListV1Sql, map[string]interface{}{
+				"task_id": newTaskId,
+				"list_id": evt.NewListId,
+			})
+			if err != nil {
+				return true, err
+			}
+		}
+		return true, nil
 	}
 	return false, nil
 }

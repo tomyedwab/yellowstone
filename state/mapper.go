@@ -122,6 +122,14 @@ func EventMapper(message *json.RawMessage, generic *events.GenericEvent) (events
 		}
 		return &event, nil
 
+	case "yellowstone:duplicateTasks":
+		var event DuplicateTasksEvent
+		err := json.Unmarshal(*message, &event)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing yellowstone:duplicateTasks %d: %w", generic.Id, err)
+		}
+		return &event, nil
+
 	default:
 		return generic, nil
 	}

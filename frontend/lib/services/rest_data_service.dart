@@ -520,4 +520,14 @@ class RestDataService extends ChangeNotifier {
     _currentEventId++;
     notifyListeners();
   }
+
+  Future<void> duplicateTasksToList(Set<int> taskIds, int newListId) async {
+    await doPublishRequest({
+      'type': 'yellowstone:duplicateTasks',
+      'taskIds': taskIds.toList(),
+      'newListId': newListId,
+    });
+    _currentEventId++;
+    notifyListeners();
+  }
 }

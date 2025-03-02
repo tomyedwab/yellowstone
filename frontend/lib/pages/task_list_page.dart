@@ -5,6 +5,7 @@ import '../widgets/selectable_task_list_widget.dart';
 import '../widgets/reorderable_task_list_widget.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
+import '../widgets/list_selection_dialog.dart';
 
 class TaskListPage extends StatefulWidget {
   final RestDataService dataService;
@@ -99,44 +100,29 @@ class _TaskListPageState extends State<TaskListPage> {
     }
   }
 
-  Future<void> _showListSelectionDialog({required bool isCopy}) async {
+  Future<void> _showListSelectionDialog({required bool isCopy, bool keepOriginal = false}) async {
     final lists = await widget.dataService.getAllTaskLists();
     if (!mounted) return;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isCopy ? 'Add to List' : 'Move to List'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: lists.length,
-            itemBuilder: (context, index) {
-              final list = lists[index];
-              if (list.id == widget.taskListId) return const SizedBox.shrink();
-              
-              return ListTile(
-                title: Text(list.title),
-                onTap: () {
-                  if (isCopy) {
-                    widget.dataService.copyTasksToList(_selectedTaskIds, list.id);
-                  } else {
-                    widget.dataService.moveTasksToList(_selectedTaskIds, widget.taskListId, list.id);
-                  }
-                  Navigator.pop(context);
-                  _toggleSelectionMode();
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-        ],
+      builder: (context) => ListSelectionDialog(
+        lists: lists,
+        currentListId: widget.taskListId,
+        isCopy: isCopy,
+        keepOriginal: keepOriginal,
+        onListSelected: (targetListId, keepOriginal) {
+          if (isCopy) {
+            if (keepOriginal) {
+              widget.dataService.duplicateTasksToList(_selectedTaskIds, targetListId);
+            } else {
+              widget.dataService.copyTasksToList(_selectedTaskIds, targetListId);
+            }
+          } else {
+            widget.dataService.moveTasksToList(_selectedTaskIds, widget.taskListId, targetListId);
+          }
+          _toggleSelectionMode();
+        },
       ),
     );
   }
@@ -162,12 +148,17 @@ class _TaskListPageState extends State<TaskListPage> {
         ),
         IconButton(
           icon: const Icon(Icons.library_add),
-          onPressed: () => _showListSelectionDialog(isCopy: true),
+          onPressed: () => _showListSelectionDialog(isCopy: true, keepOriginal: false),
           tooltip: 'Add to another list',
         ),
         IconButton(
+          icon: const Icon(Icons.content_copy),
+          onPressed: () => _showListSelectionDialog(isCopy: true, keepOriginal: true),
+          tooltip: 'Copy to another list',
+        ),
+        IconButton(
           icon: const Icon(Icons.drive_file_move),
-          onPressed: () => _showListSelectionDialog(isCopy: false),
+          onPressed: () => _showListSelectionDialog(isCopy: false, keepOriginal: false),
           tooltip: 'Move to another list',
         ),
       ],
