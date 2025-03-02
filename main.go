@@ -9,7 +9,7 @@ import (
 	"tomyedwab.com/yellowstone-server/state"
 )
 
-const Version = "1.0.6"
+const Version = "1.0.7"
 
 func main() {
 	db, err := database.Connect("sqlite3", "yellowstone.db", Version, map[string]database.EventUpdateHandler{
