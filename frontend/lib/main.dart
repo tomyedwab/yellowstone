@@ -18,8 +18,8 @@ class YellowstoneApp extends StatelessWidget {
 
   YellowstoneApp({super.key}) {
     _router = createRouter(_dataService);
-    _dataService.setLoginRedirectHandler((url) {
-      _router.go('/login?loginUrl=$url');
+    _dataService.setNavigateToLoginHandler(() {
+      _router.go('/login');
     });
   }
 

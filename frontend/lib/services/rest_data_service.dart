@@ -1,21 +1,39 @@
 import 'dart:convert';
 import 'dart:math';
+// Conditional import for dart:html
+import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+// Conditional import for BrowserClient
+import 'browser_client_stub.dart'
+    if (dart.library.html) 'package:http/browser_client.dart'
+    show BrowserClient;
 import 'package:webview_cookie_jar/webview_cookie_jar.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/task.dart';
 import '../models/task_list.dart';
 import '../models/task_history.dart';
+import 'dart:async';
 
-typedef LoginRedirectHandler = void Function(String loginUrl);
+/// Exception thrown when a request should be retried after a successful token refresh.
+class RetryRequestException implements Exception {
+  final String message;
+  RetryRequestException(
+      [this.message = "Request should be retried after token refresh."]);
+
+  @override
+  String toString() => "RetryRequestException: $message";
+}
+
+typedef LoginRedirectHandler = void Function();
 
 typedef InFlightRequest = (String clientId, Map<String, Object?> event);
 
 class RestDataService extends ChangeNotifier {
   static String get baseUrl {
     if (kReleaseMode) {
-      return 'https://yellowstone.tomyedwab.com/api';
+      return '/api';
     } else {
       if (kIsWeb) {
         return 'http://localhost:8334/api';
@@ -25,6 +43,7 @@ class RestDataService extends ChangeNotifier {
       }
     }
   }
+
   static bool get needsWebCookies {
     if (!kReleaseMode) {
       return false;
@@ -36,12 +55,18 @@ class RestDataService extends ChangeNotifier {
     // webview
     return true;
   }
+
   static final RestDataService _instance = RestDataService._internal();
-  
+
   factory RestDataService() {
     return _instance;
   }
-  
+
+  static const String _loginApi = String.fromEnvironment("LOGIN_API");
+  static const String _loginUrl = '$_loginApi/';
+  static const String _refreshUrl = '$_loginApi/api/refresh';
+
+  String? _accessToken;
   int _currentEventId = 0;
   String _currentServerVersion = '';
   bool _isPolling = false;
@@ -53,6 +78,8 @@ class RestDataService extends ChangeNotifier {
   // Cache storage
   final Map<String, String> _responseCache = {};
   int _lastCacheEventId = 0;
+  bool _isRefreshingToken = false;
+  Completer<bool>? _refreshTokenCompleter;
 
   void _clearCacheIfEventChanged() {
     if (_lastCacheEventId != _currentEventId) {
@@ -63,20 +90,21 @@ class RestDataService extends ChangeNotifier {
 
   Future<http.Response> _getCachedResponse(String url) async {
     _clearCacheIfEventChanged();
-    
+
     final cachedResponse = _responseCache[url];
     if (cachedResponse != null) {
       return http.Response(cachedResponse, 200);
     }
 
-    final streamedResponse = await http.Client().send(await createGetRequest(url));
+    final streamedResponse =
+        await http.Client().send(await createGetRequest(url));
     final response = await http.Response.fromStream(streamedResponse);
     _handleResponse(response);
 
     if (response.statusCode == 200) {
       _responseCache[url] = response.body;
     }
-    
+
     return response;
   }
 
@@ -91,24 +119,36 @@ class RestDataService extends ChangeNotifier {
     final request = http.Request('GET', Uri.parse(url))
       ..followRedirects = false
       ..maxRedirects = 0;
-    if (needsWebCookies) {
-      final cookies = await WebViewCookieJar.cookieJar.loadForRequest(request.url);
-      request.headers['Cookie'] = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+
+    if (_accessToken != null) {
+      request.headers['Authorization'] = 'Bearer $_accessToken';
+    } else if (needsWebCookies) {
+      final cookies =
+          await WebViewCookieJar.cookieJar.loadForRequest(request.url);
+      request.headers['Cookie'] =
+          cookies.map((c) => '${c.name}=${c.value}').join('; ');
     }
     return request;
   }
 
-  Future<http.StreamedResponse> doPublishRequest(Map<String, Object?> event) async {
+  Future<http.StreamedResponse> doPublishRequest(
+      Map<String, Object?> event) async {
     final clientId = _generateClientId();
     _inFlightRequests.add((clientId, event));
     notifyListeners();
 
-    final request = http.Request('POST', Uri.parse('$baseUrl/publish?cid=$clientId'))
-      ..followRedirects = false
-      ..maxRedirects = 0;
-    if (needsWebCookies) {
-      final cookies = await WebViewCookieJar.cookieJar.loadForRequest(request.url);
-      request.headers['Cookie'] = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+    final request =
+        http.Request('POST', Uri.parse('$baseUrl/publish?cid=$clientId'))
+          ..followRedirects = false
+          ..maxRedirects = 0;
+
+    if (_accessToken != null) {
+      request.headers['Authorization'] = 'Bearer $_accessToken';
+    } else if (needsWebCookies) {
+      final cookies =
+          await WebViewCookieJar.cookieJar.loadForRequest(request.url);
+      request.headers['Cookie'] =
+          cookies.map((c) => '${c.name}=${c.value}').join('; ');
     }
     request.headers['Content-Type'] = 'application/json';
     event['timestamp'] = DateTime.now().toUtc().toIso8601String();
@@ -121,71 +161,195 @@ class RestDataService extends ChangeNotifier {
     return response;
   }
 
-  void setLoginRedirectHandler(LoginRedirectHandler handler) {
-    _loginRedirectHandler = handler;
+  void setNavigateToLoginHandler(LoginRedirectHandler handler) {
+    _navigateToLoginHandler = handler;
   }
 
-  void _handleResponse(http.Response response) {
-    if (response.statusCode == 302) {
-      final location = response.headers['location'];
-      if (location != null && _loginRedirectHandler != null) {
-        _loginRedirectHandler!(location);
-        throw Exception('Redirecting to login');
+  Future<bool> _refreshAccessToken() async {
+    if (_isRefreshingToken) {
+      if (kDebugMode) {
+        print('Token refresh already in progress. Waiting for completion...');
+      }
+      // Wait for the other refresh to complete
+      return await _refreshTokenCompleter!.future;
+    }
+    _isRefreshingToken = true;
+    _refreshTokenCompleter = Completer<bool>();
+
+    http.Client client;
+    String? yrtCookieValue;
+
+    if (kIsWeb) {
+      // Make sure normal cookies are sent with the request
+      client = BrowserClient()..withCredentials = true;
+    } else {
+      client = http.Client();
+      // For mobile, try to load YRT cookie from secure storage
+      const storage = FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+        ),
+      );
+      try {
+        yrtCookieValue = await storage.read(key: 'yrt_cookie');
+        if (kDebugMode) {
+          if (yrtCookieValue != null) {
+            print('YRT cookie found in secure storage for refresh.');
+          } else {
+            print('YRT cookie not found in secure storage for refresh.');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error reading YRT cookie from secure storage: $e');
+        }
       }
     }
+
+    try {
+      final refreshUri = Uri.parse(_refreshUrl).replace(queryParameters: {
+        'app': '0001-0003',
+      });
+      final request = http.Request('POST', refreshUri)
+        ..headers['Content-Type'] = 'application/json'
+        ..followRedirects = false
+        ..maxRedirects = 0;
+
+      if (!kIsWeb && yrtCookieValue != null) {
+        // yrtCookieValue should be just the token value, not the full "YRT=value;..." string.
+        request.headers['Cookie'] = 'YRT=$yrtCookieValue';
+      }
+      request.body = json.encode({'application': 'yellowstone'});
+
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final respData = json.decode(response.body);
+        _accessToken = respData['access_token'] as String?;
+        if (_accessToken != null) {
+          if (kDebugMode) {
+            print('Access token refreshed successfully.');
+          }
+          notifyListeners(); // Token changed, might affect UI or other requests
+          _refreshTokenCompleter!.complete(true);
+          return true;
+        }
+        if (kDebugMode) {
+          print('Access token not found in refresh response.');
+        }
+        _refreshTokenCompleter!.complete(false);
+        return false;
+      } else {
+        if (kDebugMode) {
+          print(
+              'Access token refresh failed: ${response.statusCode} ${response.body}');
+        }
+        _refreshTokenCompleter!.complete(false);
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during access token refresh: $e');
+      }
+      _refreshTokenCompleter!.complete(false);
+      return false;
+    } finally {
+      client.close();
+      _isRefreshingToken = false;
+    }
   }
-  
+
+  // Returns true if a retry should be attempted, otherwise throws or returns false.
+  Future<void> _handleResponse(http.Response response) async {
+    if (response.statusCode == 401) {
+      if (kDebugMode) {
+        print('Received 401, attempting token refresh...');
+      }
+      bool tokenRefreshed = await _refreshAccessToken();
+      if (tokenRefreshed) {
+        // Signal to the caller that the request should be retried.
+        throw RetryRequestException();
+      } else {
+        if (kIsWeb) {
+          html.window.location.href =
+              _loginUrl + "?app=0001-0003&name=Yellowstone";
+          return;
+        }
+        // Refresh failed, redirect to login.
+        if (_navigateToLoginHandler != null) {
+          _navigateToLoginHandler!();
+          throw Exception('Failed to refresh token. Redirecting to login.');
+        } else {
+          throw Exception(
+              'Failed to refresh token and no login redirect handler set.');
+        }
+      }
+    }
+    // For other status codes, this handler currently does nothing.
+    // Original logic only handled 401 for immediate redirect.
+    // If other general status code handling is needed here, it can be added.
+  }
+
   late final Random _random;
   final Map<int, Task> _tasks = {};
-  LoginRedirectHandler? _loginRedirectHandler;
-  
+  LoginRedirectHandler? _navigateToLoginHandler;
+
   String _generateClientId() {
-    return List.generate(16, (_) => _random.nextInt(16).toRadixString(16)).join();
+    return List.generate(16, (_) => _random.nextInt(16).toRadixString(16))
+        .join();
   }
 
   Future<List<TaskList>> getTaskLists({bool includeArchived = false}) async {
     final response = await _getCachedResponse('$baseUrl/tasklist/all');
-    
+
     if (response.statusCode != 200) {
       throw Exception('Failed to load task lists');
     }
-    
+
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> taskLists = data['TaskLists'];
 
-    final inFlightReorderedTaskLists = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:reorderTaskList');
+    final inFlightReorderedTaskLists = _inFlightRequests.where(
+        (request) => request.$2['type'] == 'yellowstone:reorderTaskList');
     for (final inFlightRequest in inFlightReorderedTaskLists) {
       final oldTaskListId = inFlightRequest.$2['listId'];
       final afterTaskListId = inFlightRequest.$2['afterListId'];
-      final oldTaskListIndex = taskLists.indexWhere((taskList) => taskList['Id'] == oldTaskListId);
-      final afterTaskListIndex = taskLists.indexWhere((taskList) => taskList['Id'] == afterTaskListId);
+      final oldTaskListIndex =
+          taskLists.indexWhere((taskList) => taskList['Id'] == oldTaskListId);
+      final afterTaskListIndex =
+          taskLists.indexWhere((taskList) => taskList['Id'] == afterTaskListId);
       if (oldTaskListIndex != -1) {
         final taskList = taskLists[oldTaskListIndex];
         taskLists.removeAt(oldTaskListIndex);
-        taskLists.insert(afterTaskListIndex+1, taskList);
+        taskLists.insert(afterTaskListIndex + 1, taskList);
       }
     }
-      
-    return taskLists.map((json) => TaskList(
-      id: json['Id'],
-      title: json['Title'],
-      category: _categoryFromString(json['Category']),
-      archived: json['Archived'],
-    )).toList();
+
+    return taskLists
+        .map((json) => TaskList(
+              id: json['Id'],
+              title: json['Title'],
+              category: _categoryFromString(json['Category']),
+              archived: json['Archived'],
+            ))
+        .toList();
   }
 
   Future<List<TaskListMetadata>> getTaskListMetadata() async {
     final response = await _getCachedResponse('$baseUrl/tasklist/metadata');
-    
+
     if (response.statusCode != 200) {
       throw Exception('Failed to load task list metadata');
     }
     final List<dynamic> data = json.decode(response.body);
-    return data.map((json) => TaskListMetadata(
-      id: json['ListId'],
-      total: json['Total'],
-      completed: json['Completed'],
-    )).toList();
+    return data
+        .map((json) => TaskListMetadata(
+              id: json['ListId'],
+              total: json['Total'],
+              completed: json['Completed'],
+            ))
+        .toList();
   }
 
   TaskListCategory _categoryFromString(String category) {
@@ -203,15 +367,17 @@ class RestDataService extends ChangeNotifier {
 
   Future<TaskList> getTaskListById(int taskListId) async {
     // Get the task list details
-    final listResponse = await _getCachedResponse('$baseUrl/tasklist/get?id=$taskListId');
-    
+    final listResponse =
+        await _getCachedResponse('$baseUrl/tasklist/get?id=$taskListId');
+
     if (listResponse.statusCode != 200) {
       throw Exception('Failed to load task list: ${listResponse.body}');
     }
 
     // Get the tasks for this list
-    final tasksResponse = await _getCachedResponse('$baseUrl/task/list?listId=$taskListId');
-    
+    final tasksResponse =
+        await _getCachedResponse('$baseUrl/task/list?listId=$taskListId');
+
     if (tasksResponse.statusCode != 200) {
       throw Exception('Failed to load tasks: ${tasksResponse.body}');
     }
@@ -226,9 +392,13 @@ class RestDataService extends ChangeNotifier {
         id: taskData['Id'],
         title: taskData['Title'],
         taskListId: taskListId,
-        dueDate: taskData['DueDate'] != null ? DateTime.parse(taskData['DueDate']) : null,
+        dueDate: taskData['DueDate'] != null
+            ? DateTime.parse(taskData['DueDate'])
+            : null,
         isCompleted: taskData['CompletedAt'] != null,
-        completedAt: taskData['CompletedAt'] != null ? DateTime.parse(taskData['CompletedAt']) : null,
+        completedAt: taskData['CompletedAt'] != null
+            ? DateTime.parse(taskData['CompletedAt'])
+            : null,
       );
       _tasks[task.id] = task;
     }
@@ -251,26 +421,33 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<List<Task>> getTasksForList(int taskListId) async {
-    final response = await _getCachedResponse('$baseUrl/task/list?listId=$taskListId');
-    
+    final response =
+        await _getCachedResponse('$baseUrl/task/list?listId=$taskListId');
+
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final List<dynamic> tasksData = data['Tasks'];
 
-      final inFlightCompletedTasks = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:updateTaskCompleted');
-      final inFlightRenamedTasks = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:updateTaskTitle');
-      final inFlightReorderedTasks = _inFlightRequests.where((request) => request.$2['type'] == 'yellowstone:reorderTasks' && request.$2['taskListId'] == taskListId);
+      final inFlightCompletedTasks = _inFlightRequests.where(
+          (request) => request.$2['type'] == 'yellowstone:updateTaskCompleted');
+      final inFlightRenamedTasks = _inFlightRequests.where(
+          (request) => request.$2['type'] == 'yellowstone:updateTaskTitle');
+      final inFlightReorderedTasks = _inFlightRequests.where((request) =>
+          request.$2['type'] == 'yellowstone:reorderTasks' &&
+          request.$2['taskListId'] == taskListId);
 
       for (final inFlightRequest in inFlightReorderedTasks) {
         final oldTaskId = inFlightRequest.$2['oldTaskId'];
         final afterTaskId = inFlightRequest.$2['afterTaskId'];
         // Reorder the tasks in tasksData
-        final oldTaskIndex = tasksData.indexWhere((task) => task['Id'] == oldTaskId);
-        final afterTaskIndex = tasksData.indexWhere((task) => task['Id'] == afterTaskId);
+        final oldTaskIndex =
+            tasksData.indexWhere((task) => task['Id'] == oldTaskId);
+        final afterTaskIndex =
+            tasksData.indexWhere((task) => task['Id'] == afterTaskId);
         if (oldTaskIndex != -1) {
           final taskData = tasksData[oldTaskIndex];
           tasksData.removeAt(oldTaskIndex);
-          tasksData.insert(afterTaskIndex+1, taskData);
+          tasksData.insert(afterTaskIndex + 1, taskData);
         }
       }
 
@@ -291,44 +468,53 @@ class RestDataService extends ChangeNotifier {
           id: taskData['Id'],
           title: title,
           taskListId: taskListId,
-          dueDate: taskData['DueDate'] != null ? DateTime.parse(taskData['DueDate']) : null,
+          dueDate: taskData['DueDate'] != null
+              ? DateTime.parse(taskData['DueDate'])
+              : null,
           isCompleted: completedAt != null,
           completedAt: completedAt != null ? DateTime.parse(completedAt) : null,
         );
         _tasks[task.id] = task;
         return task;
       }).toList();
-      
+
       return tasks;
     } else {
       throw Exception('Failed to load tasks: ${response.body}');
     }
   }
 
-  Future<List<TaskRecentComment>> getTaskListRecentComments(int taskListId) async {
-    final response = await _getCachedResponse('$baseUrl/tasklist/recent_comments?listId=$taskListId');
+  Future<List<TaskRecentComment>> getTaskListRecentComments(
+      int taskListId) async {
+    final response = await _getCachedResponse(
+        '$baseUrl/tasklist/recent_comments?listId=$taskListId');
     if (response.statusCode != 200) {
       throw Exception('Failed to load task list recent comments');
     }
     final List<dynamic> data = jsonDecode(response.body);
-    return data.map((json) => TaskRecentComment(
-      taskId: json['TaskId'],
-      userComment: json['UserComment'],
-      createdAt: DateTime.parse(json['CreatedAt']),
-    )).toList();
+    return data
+        .map((json) => TaskRecentComment(
+              taskId: json['TaskId'],
+              userComment: json['UserComment'],
+              createdAt: DateTime.parse(json['CreatedAt']),
+            ))
+        .toList();
   }
 
   Future<List<TaskLabel>> getTaskLabels(int taskListId) async {
-    final response = await _getCachedResponse('$baseUrl/tasklist/labels?listId=$taskListId');
+    final response =
+        await _getCachedResponse('$baseUrl/tasklist/labels?listId=$taskListId');
     if (response.statusCode != 200) {
       throw Exception('Failed to load task labels');
     }
     final List<dynamic> data = jsonDecode(response.body);
-    return data.map((json) => TaskLabel(
-      taskId: json['TaskId'],
-      label: json['Label'],
-      listId: json['ListId'],
-    )).toList();
+    return data
+        .map((json) => TaskLabel(
+              taskId: json['TaskId'],
+              label: json['Label'],
+              listId: json['ListId'],
+            ))
+        .toList();
   }
 
   Future<void> updateTaskTitle(int taskId, String title) async {
@@ -363,7 +549,8 @@ class RestDataService extends ChangeNotifier {
     });
   }
 
-  Future<void> reorderTasks(int taskListId, int oldTaskId, int? afterTaskId) async {
+  Future<void> reorderTasks(
+      int taskListId, int oldTaskId, int? afterTaskId) async {
     await doPublishRequest({
       'type': 'yellowstone:reorderTasks',
       'taskListId': taskListId,
@@ -422,15 +609,16 @@ class RestDataService extends ChangeNotifier {
   }
 
   Future<TaskHistoryResponse> getTaskHistory(int taskId) async {
-    final response = await _getCachedResponse('$baseUrl/task/history?id=$taskId');
-    
+    final response =
+        await _getCachedResponse('$baseUrl/task/history?id=$taskId');
+
     if (response.statusCode != 200) {
       throw Exception('Failed to load task history');
     }
-    
+
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> history = data['history'];
-    
+
     return TaskHistoryResponse(
       history: history.map((json) => TaskHistory.fromJson(json)).toList(),
       title: data['title'],
@@ -459,10 +647,9 @@ class RestDataService extends ChangeNotifier {
     while (_isPolling) {
       try {
         final streamedResponse = await http.Client().send(
-          await createGetRequest('$baseUrl/poll?e=${_currentEventId + 1}')
-        );
+            await createGetRequest('$baseUrl/poll?e=${_currentEventId + 1}'));
         final response = await http.Response.fromStream(streamedResponse);
-        _handleResponse(response);
+        await _handleResponse(response);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -484,23 +671,26 @@ class RestDataService extends ChangeNotifier {
 
   Future<List<TaskList>> getAllTaskLists() async {
     final response = await _getCachedResponse('$baseUrl/tasklist/all');
-    
+
     if (response.statusCode != 200) {
       throw Exception('Failed to load task lists');
     }
-    
+
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> taskLists = data['TaskLists'];
-      
-    return taskLists.map((json) => TaskList(
-      id: json['Id'],
-      title: json['Title'],
-      category: _categoryFromString(json['Category']),
-      archived: json['Archived'],
-    )).toList();
+
+    return taskLists
+        .map((json) => TaskList(
+              id: json['Id'],
+              title: json['Title'],
+              category: _categoryFromString(json['Category']),
+              archived: json['Archived'],
+            ))
+        .toList();
   }
 
-  Future<void> moveTasksToList(Set<int> taskIds, int oldListId, int newListId) async {
+  Future<void> moveTasksToList(
+      Set<int> taskIds, int oldListId, int newListId) async {
     await doPublishRequest({
       'type': 'yellowstone:moveTasks',
       'taskIds': taskIds.toList(),

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"tomyedwab.com/yellowstone-server/database/events"
+	"github.com/tomyedwab/yesterday/database/events"
 )
 
 func EventMapper(message *json.RawMessage, generic *events.GenericEvent) (events.Event, error) {

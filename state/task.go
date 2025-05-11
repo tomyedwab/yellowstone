@@ -8,9 +8,9 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"tomyedwab.com/yellowstone-server/database"
-	"tomyedwab.com/yellowstone-server/database/events"
-	"tomyedwab.com/yellowstone-server/database/middleware"
+	"github.com/tomyedwab/yesterday/database"
+	"github.com/tomyedwab/yesterday/database/events"
+	"github.com/tomyedwab/yesterday/database/middleware"
 )
 
 // Table schema

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"tomyedwab.com/yellowstone-server/database/events"
+	"github.com/tomyedwab/yesterday/database/events"
 )
 
 // Table schema

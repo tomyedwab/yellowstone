@@ -5,7 +5,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"tomyedwab.com/yellowstone-server/database"
+	"github.com/tomyedwab/yesterday/database"
 	"tomyedwab.com/yellowstone-server/state"
 )
 
@@ -25,6 +25,9 @@ func main() {
 	db.InitHandlers(state.EventMapper)
 	state.InitTaskListHandlers(db)
 	state.InitTaskHandlers(db)
+
+	// Serve static files
+	http.Handle("/", http.FileServer(http.Dir("frontend/build/web")))
 
 	err = http.ListenAndServe("0.0.0.0:8334", nil)
 	if err != nil {
