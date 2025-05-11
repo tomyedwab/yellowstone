@@ -272,8 +272,7 @@ class RestDataService extends ChangeNotifier {
         throw RetryRequestException();
       } else {
         if (kIsWeb) {
-          html.window.location.href =
-              _loginUrl + "?app=0001-0003&name=Yellowstone";
+          html.window.location.href = _loginUrl + "?app=0001-0003";
           return;
         }
         // Refresh failed, redirect to login.

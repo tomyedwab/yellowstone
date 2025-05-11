@@ -12,15 +12,49 @@ void main() {
   runApp(YellowstoneApp());
 }
 
-class YellowstoneApp extends StatelessWidget {
+class YellowstoneApp extends StatefulWidget {
+  YellowstoneApp({super.key});
+
+  @override
+  State<YellowstoneApp> createState() => _YellowstoneAppState();
+}
+
+class _YellowstoneAppState extends State<YellowstoneApp> {
   final RestDataService _dataService = RestDataService();
   late final GoRouter _router;
+  bool _isLoading = true;
 
-  YellowstoneApp({super.key}) {
+  @override
+  void initState() {
+    super.initState();
     _router = createRouter(_dataService);
     _dataService.setNavigateToLoginHandler(() {
       _router.go('/login');
     });
+
+    // Check initial server version
+    if (_dataService.serverVersion.isNotEmpty) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
+    // Listen for changes in RestDataService
+    _dataService.addListener(_handleDataServiceChange);
+  }
+
+  void _handleDataServiceChange() {
+    if (_dataService.serverVersion.isNotEmpty && _isLoading) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _dataService.removeListener(_handleDataServiceChange);
+    super.dispose();
   }
 
   // Global navigator key to enable navigation from outside of build context
@@ -28,6 +62,35 @@ class YellowstoneApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xff111e2a),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xfff6fbff),
+            surface: Color(0xff111e2a),
+          ),
+          textTheme: TextTheme(
+            bodyMedium: GoogleFonts.roboto(color: const Color(0xfff6fbff)),
+          ),
+        ),
+        home: const Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Connecting to server...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp.router(
       routerConfig: _router,
       title: 'Yellowstone',

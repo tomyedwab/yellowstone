@@ -27,7 +27,17 @@ func main() {
 	state.InitTaskHandlers(db)
 
 	// Serve static files
-	http.Handle("/", http.FileServer(http.Dir("frontend/build/web")))
+	fs := http.FileServer(http.Dir("frontend/build/web"))
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		if r.Method == "OPTIONS" {
+			return
+		}
+		fs.ServeHTTP(w, r)
+	})
+	http.Handle("/", handler)
 
 	err = http.ListenAndServe("0.0.0.0:8334", nil)
 	if err != nil {
