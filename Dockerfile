@@ -6,7 +6,6 @@ WORKDIR /src
 RUN go mod download
 
 COPY main.go /src/
-COPY database /src/database
 COPY state /src/state
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=1 \
   go build -o yellowstone-server main.go
