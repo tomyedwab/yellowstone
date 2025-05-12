@@ -31,7 +31,6 @@ func EventMapper(message *json.RawMessage, generic *events.GenericEvent) (events
 		if err != nil {
 			return nil, fmt.Errorf("error parsing yellowstone:updateTaskListArchived %d: %w", generic.Id, err)
 		}
-		fmt.Printf("EventMapper: yellowstone:updateTaskListArchived %d %v\n", event.ListId, event.Archived) // donotcheckin
 		return &event, nil
 
 	case "yellowstone:reorderTaskList":

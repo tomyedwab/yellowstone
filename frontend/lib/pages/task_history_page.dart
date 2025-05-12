@@ -6,8 +6,13 @@ import '../services/responsive_service.dart';
 class TaskHistoryPage extends StatefulWidget {
   final int taskId;
   final ResponsiveService responsiveService;
+  final RestDataService dataService;
 
-  const TaskHistoryPage({super.key, required this.taskId, required this.responsiveService});
+  const TaskHistoryPage(
+      {super.key,
+      required this.taskId,
+      required this.responsiveService,
+      required this.dataService});
 
   @override
   State<TaskHistoryPage> createState() => _TaskHistoryPageState();
@@ -33,7 +38,7 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
 
   Future<void> _loadHistory() async {
     try {
-      final history = await RestDataService().getTaskHistory(widget.taskId);
+      final history = await widget.dataService.getTaskHistory(widget.taskId);
       setState(() {
         _history = history.history;
         _title = history.title;
@@ -53,7 +58,7 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
     if (comment.isEmpty) return;
 
     try {
-      await RestDataService().addTaskComment(widget.taskId, comment);
+      await widget.dataService.addTaskComment(widget.taskId, comment);
       _commentController.clear();
       await _loadHistory(); // Reload history to show new comment
     } catch (e) {
@@ -67,7 +72,7 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
-           '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -111,7 +116,9 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.surfaceVariant,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceVariant,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -125,7 +132,9 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.surfaceVariant,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceVariant,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -177,4 +186,4 @@ class _TaskHistoryPageState extends State<TaskHistoryPage> {
       body: body,
     );
   }
-} 
+}

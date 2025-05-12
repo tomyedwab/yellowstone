@@ -10,6 +10,7 @@ import 'pages/labels_page.dart';
 import 'pages/login_page.dart';
 import 'services/rest_data_service.dart';
 import 'services/responsive_service.dart';
+import 'yesterday/auth.dart';
 
 List<GoRoute> createSubRoutes(
   RestDataService dataService,
@@ -68,6 +69,7 @@ List<GoRoute> createSubRoutes(
                               'taskHistoryPage-${state.pathParameters['taskId']}'),
                           taskId: int.parse(state.pathParameters['taskId']!),
                           responsiveService: responsiveService,
+                          dataService: dataService,
                         ),
                       ],
                     )),
@@ -76,7 +78,7 @@ List<GoRoute> createSubRoutes(
   ];
 }
 
-GoRouter createRouter(RestDataService dataService) {
+GoRouter createRouter(RestDataService dataService, YesterdayAuth auth) {
   return GoRouter(
     initialLocation: '/',
     routes: [
@@ -175,7 +177,9 @@ GoRouter createRouter(RestDataService dataService) {
       GoRoute(
         path: '/login',
         builder: (context, state) => LoginPage(
+          auth: auth,
           onLoginSuccess: () {
+            dataService.startPolling();
             context.go('/');
           },
         ),

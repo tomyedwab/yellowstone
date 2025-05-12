@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import 'services/rest_data_service.dart';
-import 'services/responsive_service.dart';
 import 'router.dart';
+import 'yesterday/auth.dart';
 
 void main() {
   usePathUrlStrategy();
@@ -20,17 +20,23 @@ class YellowstoneApp extends StatefulWidget {
 }
 
 class _YellowstoneAppState extends State<YellowstoneApp> {
-  final RestDataService _dataService = RestDataService();
+  late final YesterdayAuth _auth;
+  late final RestDataService _dataService;
   late final GoRouter _router;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _router = createRouter(_dataService);
-    _dataService.setNavigateToLoginHandler(() {
+    _auth = YesterdayAuth('0001-0003', () {
+      _dataService.stopPolling();
       _router.go('/login');
+      setState(() {
+        _isLoading = false;
+      });
     });
+    _dataService = RestDataService(_auth);
+    _router = createRouter(_dataService, _auth);
 
     // Check initial server version
     if (_dataService.serverVersion.isNotEmpty) {
