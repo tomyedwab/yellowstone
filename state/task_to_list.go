@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tomyedwab/yesterday/database/events"
+
+	"github.com/tomyedwab/yesterday/applib/database"
 )
 
 // Table schema
@@ -21,39 +22,36 @@ CREATE TABLE IF NOT EXISTS task_to_list_v1 (
 `
 
 // Events
-type AddTaskToListEvent struct {
-	events.GenericEvent
 
+const AddTaskToListEventType = "TaskList:AddTask"
+const MoveTasksEventType = "TaskList:MoveTasks"
+const CopyTasksEventType = "TaskList:CopyTasks"
+const ReorderTasksEventType = "TaskList:ReorderTasks"
+const DuplicateTasksEventType = "TaskList:DuplicateTasks"
+
+type AddTaskToListEvent struct {
 	TaskId int `db:"task_id"`
 	ListId int `db:"list_id"`
 }
 
 type MoveTasksEvent struct {
-	events.GenericEvent
-
 	TaskIds   []int `db:"task_ids"`
 	OldListId int   `db:"old_list_id"`
 	NewListId int   `db:"new_list_id"`
 }
 
 type CopyTasksEvent struct {
-	events.GenericEvent
-
 	TaskIds   []int `db:"task_ids"`
 	NewListId int   `db:"new_list_id"`
 }
 
 type ReorderTasksEvent struct {
-	events.GenericEvent
-
 	TaskListId  int  `db:"task_list_id"`
 	OldTaskId   int  `db:"old_task_id"`
 	AfterTaskId *int `db:"after_task_id"`
 }
 
 type DuplicateTasksEvent struct {
-	events.GenericEvent
-
 	TaskIds   []int `db:"task_ids"`
 	NewListId int   `db:"new_list_id"`
 }
@@ -107,7 +105,7 @@ WITH old_task AS (
   SELECT position + 1 AS position FROM task_to_list_v1 WHERE task_id = :after_task_id AND list_id = :task_list_id
 )
 UPDATE task_to_list_v1
-SET position = CASE 
+SET position = CASE
   WHEN position = (SELECT position FROM old_task) THEN (SELECT position FROM new_task)
   WHEN position > (SELECT position FROM old_task) AND position < (SELECT position FROM new_task) THEN position - 1
   WHEN position < (SELECT position FROM old_task) AND position >= (SELECT position FROM new_task) THEN position + 1
@@ -118,7 +116,7 @@ WHERE list_id = :task_list_id;
 
 const reorderTaskToFrontV1Sql = `
 UPDATE task_to_list_v1
-SET position = CASE 
+SET position = CASE
   WHEN task_id = :old_task_id THEN 1
   ELSE position + 1
 END
@@ -139,99 +137,108 @@ SELECT :task_id, :list_id, COALESCE(MAX(position), 0) + 1
 FROM task_to_list_v1 WHERE list_id = :list_id;
 `
 
-func TaskToListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
-	switch evt := event.(type) {
-	case *events.DBInitEvent:
-		fmt.Printf("Initializing TaskToList v1\n")
-		_, err := tx.Exec(taskToListSchema)
-		return true, err
+func InitTaskToList(db *database.Database, tx *sqlx.Tx) error {
+	database.AddEventHandler(db, AddTaskToListEventType, handleAddTaskToListEvent)
+	database.AddEventHandler(db, DeleteTaskEventType, handleListDeleteTaskEvent)
+	database.AddEventHandler(db, MoveTasksEventType, handleMoveTasksEvent)
+	database.AddEventHandler(db, CopyTasksEventType, handleCopyTasksEvent)
+	database.AddEventHandler(db, ReorderTasksEventType, handleReorderTasksEvent)
+	database.AddEventHandler(db, DuplicateTasksEventType, handleDuplicateTasksEvent)
 
-	case *AddTaskToListEvent:
-		fmt.Printf("TaskToList v1: AddTaskToListEvent %d %d %d\n", evt.Id, evt.TaskId, evt.ListId)
-		_, err := tx.NamedExec(insertTaskToListV1Sql, evt)
-		return true, err
+	fmt.Printf("Initializing TaskToList v1\n")
+	_, err := tx.Exec(taskToListSchema)
+	return err
+}
 
-	case *DeleteTaskEvent:
-		fmt.Printf("TaskToList v1: DeleteTaskEvent %d %d\n", evt.Id, evt.TaskId)
-		_, err := tx.NamedExec(deleteTaskToListV1Sql, evt)
-		return true, err
+func handleAddTaskToListEvent(tx *sqlx.Tx, event *AddTaskToListEvent) (bool, error) {
+	fmt.Printf("TaskToList v1: AddTaskToListEvent %d %d\n", event.TaskId, event.ListId)
+	_, err := tx.NamedExec(insertTaskToListV1Sql, event)
+	return true, err
+}
 
-	case *MoveTasksEvent:
-		fmt.Printf("TaskToList v1: MoveTasksEvent %d %v from %d to %d\n", evt.Id, evt.TaskIds, evt.OldListId, evt.NewListId)
-		for _, taskId := range evt.TaskIds {
-			// First remove from old list
-			_, err := tx.NamedExec(moveTaskFromListV1Sql, map[string]interface{}{
-				"task_id":     taskId,
-				"old_list_id": evt.OldListId,
-			})
-			if err != nil {
-				return true, err
-			}
+func handleListDeleteTaskEvent(tx *sqlx.Tx, event *DeleteTaskEvent) (bool, error) {
+	fmt.Printf("TaskToList v1: DeleteTaskEvent %d\n", event.TaskId)
+	_, err := tx.NamedExec(deleteTaskToListV1Sql, event)
+	return true, err
+}
 
-			// Then add to new list
-			_, err = tx.NamedExec(moveTaskToListV1Sql, map[string]interface{}{
-				"task_id":     taskId,
-				"new_list_id": evt.NewListId,
-			})
-			if err != nil {
-				return true, err
-			}
-		}
-		return true, nil
-
-	case *CopyTasksEvent:
-		fmt.Printf("TaskToList v1: CopyTasksEvent %d %v to %d\n", evt.Id, evt.TaskIds, evt.NewListId)
-		for _, taskId := range evt.TaskIds {
-			_, err := tx.NamedExec(insertTaskToListV1Sql, map[string]interface{}{
-				"task_id": taskId,
-				"list_id": evt.NewListId,
-			})
-			if err != nil {
-				return true, err
-			}
-		}
-		return true, nil
-
-	case *ReorderTasksEvent:
-		_, err := tx.NamedExec(repairTaskOrderV1Sql, map[string]interface{}{
-			"task_list_id": evt.TaskListId,
+func handleMoveTasksEvent(tx *sqlx.Tx, event *MoveTasksEvent) (bool, error) {
+	fmt.Printf("TaskToList v1: MoveTasksEvent %v from %d to %d\n", event.TaskIds, event.OldListId, event.NewListId)
+	for _, taskId := range event.TaskIds {
+		// First remove from old list
+		_, err := tx.NamedExec(moveTaskFromListV1Sql, map[string]interface{}{
+			"task_id":     taskId,
+			"old_list_id": event.OldListId,
 		})
 		if err != nil {
 			return true, err
 		}
 
-		if evt.AfterTaskId == nil {
-			fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d %d -> front\n", evt.Id, evt.TaskListId, evt.OldTaskId)
-			_, err := tx.NamedExec(reorderTaskToFrontV1Sql, evt)
-			return true, err
-		} else {
-			fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d %d -> %d\n", evt.Id, evt.TaskListId, evt.OldTaskId, *evt.AfterTaskId)
-			_, err := tx.NamedExec(reorderTasksV1Sql, evt)
+		// Then add to new list
+		_, err = tx.NamedExec(moveTaskToListV1Sql, map[string]interface{}{
+			"task_id":     taskId,
+			"new_list_id": event.NewListId,
+		})
+		if err != nil {
 			return true, err
 		}
-
-	case *DuplicateTasksEvent:
-		fmt.Printf("TaskToList v1: DuplicateTasksEvent %d %v to %d\n", evt.Id, evt.TaskIds, evt.NewListId)
-		for _, sourceTaskId := range evt.TaskIds {
-			// First duplicate the task
-			var newTaskId int
-			err := tx.Get(&newTaskId, duplicateTaskV1Sql, sourceTaskId)
-			if err != nil {
-				return true, err
-			}
-
-			// Then add the new task to the target list
-			_, err = tx.NamedExec(addDuplicatedTaskToListV1Sql, map[string]interface{}{
-				"task_id": newTaskId,
-				"list_id": evt.NewListId,
-			})
-			if err != nil {
-				return true, err
-			}
-		}
-		return true, nil
 	}
-	return false, nil
+	return true, nil
+}
+
+func handleCopyTasksEvent(tx *sqlx.Tx, event *CopyTasksEvent) (bool, error) {
+	fmt.Printf("TaskToList v1: CopyTasksEvent %v to %d\n", event.TaskIds, event.NewListId)
+	for _, taskId := range event.TaskIds {
+		_, err := tx.NamedExec(insertTaskToListV1Sql, map[string]interface{}{
+			"task_id": taskId,
+			"list_id": event.NewListId,
+		})
+		if err != nil {
+			return true, err
+		}
+	}
+	return true, nil
+}
+
+func handleReorderTasksEvent(tx *sqlx.Tx, event *ReorderTasksEvent) (bool, error) {
+	_, err := tx.NamedExec(repairTaskOrderV1Sql, map[string]interface{}{
+		"task_list_id": event.TaskListId,
+	})
+	if err != nil {
+		return true, err
+	}
+
+	if event.AfterTaskId == nil {
+		fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d -> front\n", event.TaskListId, event.OldTaskId)
+		_, err := tx.NamedExec(reorderTaskToFrontV1Sql, event)
+		return true, err
+	} else {
+		fmt.Printf("TaskToList v1: ReorderTasksEvent %d %d -> %d\n", event.TaskListId, event.OldTaskId, *event.AfterTaskId)
+		_, err := tx.NamedExec(reorderTasksV1Sql, event)
+		return true, err
+	}
+}
+
+func handleDuplicateTasksEvent(tx *sqlx.Tx, event *DuplicateTasksEvent) (bool, error) {
+	fmt.Printf("TaskToList v1: DuplicateTasksEvent %v to %d\n", event.TaskIds, event.NewListId)
+	for _, sourceTaskId := range event.TaskIds {
+		// First duplicate the task
+		var newTaskId int
+		err := tx.Get(&newTaskId, duplicateTaskV1Sql, sourceTaskId)
+		if err != nil {
+			return true, err
+		}
+
+		// Then add the new task to the target list
+		_, err = tx.NamedExec(addDuplicatedTaskToListV1Sql, map[string]interface{}{
+			"task_id": newTaskId,
+			"list_id": event.NewListId,
+		})
+		if err != nil {
+			return true, err
+		}
+	}
+	return true, nil
 }
 
 // State queries

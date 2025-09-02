@@ -7,9 +7,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/tomyedwab/yesterday/database"
-	"github.com/tomyedwab/yesterday/database/events"
-	"github.com/tomyedwab/yesterday/database/middleware"
+	"github.com/tomyedwab/yesterday/applib/database"
+	"github.com/tomyedwab/yesterday/applib/httputils"
 )
 
 // Table schema
@@ -26,31 +25,28 @@ CREATE TABLE IF NOT EXISTS task_list_v1 (
 
 // Events
 
-type AddTaskListEvent struct {
-	events.GenericEvent
+const AddTaskListEventType = "TaskList:Add"
+const UpdateTaskListTitleEventType = "TaskList:UpdateTitle"
+const UpdateTaskListArchivedEventType = "TaskList:UpdateArchived"
+const ReorderTaskListEventType = "TaskList:Reorder"
 
+type AddTaskListEvent struct {
 	Title    string
 	Category string
 	Archived bool
 }
 
 type UpdateTaskListTitleEvent struct {
-	events.GenericEvent
-
 	ListId int    `db:"list_id"`
 	Title  string `db:"title"`
 }
 
 type UpdateTaskListArchivedEvent struct {
-	events.GenericEvent
-
 	ListId   int  `db:"list_id"`
 	Archived bool `db:"archived"`
 }
 
 type ReorderTaskListEvent struct {
-	events.GenericEvent
-
 	ListId      int  `db:"list_id"`
 	AfterListId *int `db:"after_list_id"`
 }
@@ -81,7 +77,7 @@ WITH old_list AS (
   SELECT position + 1 AS position FROM task_list_v1 WHERE id = :after_list_id
 )
 UPDATE task_list_v1
-SET position = CASE 
+SET position = CASE
   WHEN position = (SELECT position FROM old_list) THEN (SELECT position FROM new_list)
   WHEN position > (SELECT position FROM old_list) AND position < (SELECT position FROM new_list) THEN position - 1
   WHEN position < (SELECT position FROM old_list) AND position >= (SELECT position FROM new_list) THEN position + 1
@@ -91,59 +87,65 @@ END
 
 const reorderTaskListToFrontV1Sql = `
 UPDATE task_list_v1
-SET position = CASE 
+SET position = CASE
   WHEN id = :list_id THEN 1
   ELSE position + 1
 END
 `
 
-func TaskListDBHandleEvent(tx *sqlx.Tx, event events.Event) (bool, error) {
-	switch evt := event.(type) {
-	case *events.DBInitEvent:
-		fmt.Printf("Initializing TaskList v1\n")
-		_, err := tx.Exec(taskListSchema)
-		return true, err
+func InitTaskList(db *database.Database, tx *sqlx.Tx) error {
+	database.AddEventHandler(db, AddTaskListEventType, handleAddTaskListEvent)
+	database.AddEventHandler(db, UpdateTaskListTitleEventType, handleUpdateTaskListTitleEvent)
+	database.AddEventHandler(db, UpdateTaskListArchivedEventType, handleUpdateTaskListArchivedEvent)
+	database.AddEventHandler(db, ReorderTaskListEventType, handleReorderTaskListEvent)
+	InitTaskListHandlers(db)
 
-	case *AddTaskListEvent:
-		fmt.Printf("TaskList v1: AddTaskListEvent %d %v %v %v\n", evt.Id, evt.Title, evt.Category, evt.Archived)
-		_, err := tx.NamedExec(
-			insertTaskListV1Sql,
-			*evt,
-		)
-		return true, err
+	fmt.Printf("Initializing TaskList v1\n")
+	_, err := tx.Exec(taskListSchema)
+	return err
+}
 
-	case *UpdateTaskListTitleEvent:
-		fmt.Printf("TaskList v1: UpdateTaskListTitleEvent %d %d %v\n", evt.Id, evt.ListId, evt.Title)
-		_, err := tx.NamedExec(
-			updateTaskListTitleV1Sql,
-			*evt,
-		)
-		return true, err
+func handleAddTaskListEvent(tx *sqlx.Tx, event *AddTaskListEvent) (bool, error) {
+	fmt.Printf("TaskList v1: AddTaskListEvent %v %v %v\n", event.Title, event.Category, event.Archived)
+	_, err := tx.NamedExec(
+		insertTaskListV1Sql,
+		*event,
+	)
+	return true, err
+}
 
-	case *UpdateTaskListArchivedEvent:
-		fmt.Printf("TaskList v1: UpdateTaskListArchivedEvent %d %d %v\n", evt.Id, evt.ListId, evt.Archived)
-		_, err := tx.NamedExec(
-			updateTaskListArchivedV1Sql,
-			*evt,
-		)
-		return true, err
+func handleUpdateTaskListTitleEvent(tx *sqlx.Tx, event *UpdateTaskListTitleEvent) (bool, error) {
+	fmt.Printf("TaskList v1: UpdateTaskListTitleEvent %d %v\n", event.ListId, event.Title)
+	_, err := tx.NamedExec(
+		updateTaskListTitleV1Sql,
+		*event,
+	)
+	return true, err
+}
 
-	case *ReorderTaskListEvent:
-		fmt.Printf("TaskList v1: ReorderTaskListEvent %d %d\n", evt.ListId, evt.AfterListId)
-		if evt.AfterListId == nil {
-			_, err := tx.NamedExec(
-				reorderTaskListToFrontV1Sql,
-				*evt,
-			)
-			return true, err
-		}
+func handleUpdateTaskListArchivedEvent(tx *sqlx.Tx, event *UpdateTaskListArchivedEvent) (bool, error) {
+	fmt.Printf("TaskList v1: UpdateTaskListArchivedEvent %d %v\n", event.ListId, event.Archived)
+	_, err := tx.NamedExec(
+		updateTaskListArchivedV1Sql,
+		*event,
+	)
+	return true, err
+}
+
+func handleReorderTaskListEvent(tx *sqlx.Tx, event *ReorderTaskListEvent) (bool, error) {
+	fmt.Printf("TaskList v1: ReorderTaskListEvent %d %d\n", event.ListId, event.AfterListId)
+	if event.AfterListId == nil {
 		_, err := tx.NamedExec(
-			reorderTaskListV1Sql,
-			*evt,
+			reorderTaskListToFrontV1Sql,
+			*event,
 		)
 		return true, err
 	}
-	return false, nil
+	_, err := tx.NamedExec(
+		reorderTaskListV1Sql,
+		*event,
+	)
+	return true, err
 }
 
 // State queries
@@ -206,94 +208,79 @@ func taskListDBById(db *sqlx.DB, id int) (TaskListV1, error) {
 }
 
 func InitTaskListHandlers(db *database.Database) {
-	http.HandleFunc("/api/tasklist/get", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			idStr := r.URL.Query().Get("id")
-			if idStr == "" {
-				http.Error(w, "Missing id parameter", http.StatusBadRequest)
-				return
-			}
+	http.HandleFunc("/api/tasklist/get", func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.URL.Query().Get("id")
+		if idStr == "" {
+			http.Error(w, "Missing id parameter", http.StatusBadRequest)
+			return
+		}
 
-			id, err := strconv.Atoi(idStr)
-			if err != nil {
-				http.Error(w, "Invalid id parameter", http.StatusBadRequest)
-				return
-			}
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
+			return
+		}
 
-			resp, err := taskListDBById(db.GetDB(), id)
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
-	http.HandleFunc("/api/tasklist/all", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			resp, err := taskListDBAll(db.GetDB())
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+		resp, err := taskListDBById(db.GetDB(), id)
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-	http.HandleFunc("/api/tasklist/todo", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			resp, err := taskListDBToDo(db.GetDB())
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+	http.HandleFunc("/api/tasklist/all", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := taskListDBAll(db.GetDB())
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-	http.HandleFunc("/api/tasklist/template", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			resp, err := taskListDBTemplate(db.GetDB())
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+	http.HandleFunc("/api/tasklist/todo", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := taskListDBToDo(db.GetDB())
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-	http.HandleFunc("/api/tasklist/archived", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			resp, err := taskListDBArchived(db.GetDB())
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+	http.HandleFunc("/api/tasklist/template", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := taskListDBTemplate(db.GetDB())
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-	http.HandleFunc("/api/tasklist/metadata", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			resp, err := taskListDBMetadata(db.GetDB())
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+	http.HandleFunc("/api/tasklist/archived", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := taskListDBArchived(db.GetDB())
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-	http.HandleFunc("/api/tasklist/recent_comments", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			listIdStr := r.URL.Query().Get("listId")
-			if listIdStr == "" {
-				http.Error(w, "Missing listId parameter", http.StatusBadRequest)
-				return
-			}
+	http.HandleFunc("/api/tasklist/metadata", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := taskListDBMetadata(db.GetDB())
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-			listId, err := strconv.Atoi(listIdStr)
-			if err != nil {
-				http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
-				return
-			}
+	http.HandleFunc("/api/tasklist/recent_comments", func(w http.ResponseWriter, r *http.Request) {
+		listIdStr := r.URL.Query().Get("listId")
+		if listIdStr == "" {
+			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
+			return
+		}
 
-			resp, err := taskListDBRecentComments(db.GetDB(), listId)
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+		listId, err := strconv.Atoi(listIdStr)
+		if err != nil {
+			http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
+			return
+		}
 
-	http.HandleFunc("/api/tasklist/labels", middleware.ApplyDefault(
-		func(w http.ResponseWriter, r *http.Request) {
-			listIdStr := r.URL.Query().Get("listId")
-			if listIdStr == "" {
-				http.Error(w, "Missing listId parameter", http.StatusBadRequest)
-				return
-			}
+		resp, err := taskListDBRecentComments(db.GetDB(), listId)
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 
-			listId, err := strconv.Atoi(listIdStr)
-			if err != nil {
-				http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
-				return
-			}
+	http.HandleFunc("/api/tasklist/labels", func(w http.ResponseWriter, r *http.Request) {
+		listIdStr := r.URL.Query().Get("listId")
+		if listIdStr == "" {
+			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
+			return
+		}
 
-			resp, err := taskListDBGetAllTaskLabels(db.GetDB(), listId)
-			database.HandleAPIResponse(w, r, resp, err)
-		},
-	))
+		listId, err := strconv.Atoi(listIdStr)
+		if err != nil {
+			http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
+			return
+		}
+
+		resp, err := taskListDBGetAllTaskLabels(db.GetDB(), listId)
+		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+	})
 }
