@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/navigation_lists">
+
+    <fragment
+        android:id="@+id/navigation_lists"
+        android:name="com.tomyedwab.yellowstone.ui.lists.ListsFragment"
+        android:label="@string/title_lists"
+        tools:layout="@layout/fragment_task_list_base" />
+
+    <fragment
+        android:id="@+id/navigation_labels"
+        android:name="com.tomyedwab.yellowstone.ui.labels.LabelsFragment"
+        android:label="@string/title_labels"
+        tools:layout="@layout/fragment_task_list_base" />
+
+    <fragment
+        android:id="@+id/navigation_templates"
+        android:name="com.tomyedwab.yellowstone.ui.templates.TemplatesFragment"
+        android:label="@string/title_templates"
+        tools:layout="@layout/fragment_task_list_base" />
+
+    <fragment
+        android:id="@+id/navigation_archived"
+        android:name="com.tomyedwab.yellowstone.ui.archived.ArchivedFragment"
+        android:label="@string/title_archived"
+        tools:layout="@layout/fragment_task_list_base" />
+</navigation>

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Yellowstone</string>
+    <string name="title_lists">Lists</string>
+    <string name="title_labels">Labels</string>
+    <string name="title_templates">Templates</string>
+    <string name="title_archived">Archived</string>
+</resources>
