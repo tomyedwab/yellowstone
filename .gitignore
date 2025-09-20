@@ -2,3 +2,4 @@
 .env
 .idea
 frontend/android/app/.cxx
+build/
