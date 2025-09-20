@@ -1,0 +1,22 @@
+{
+  "name": "Tasks & task lists",
+  "version": "1.0.0",
+  "description": "Simple task manager.",
+  "subscriptions": [
+    "Task:Add",
+    "Task:UpdateTitle",
+    "Task:UpdateCompleted",
+    "Task:UpdateDueDate",
+    "Task:Delete",
+    "Task:AddComment",
+    "TaskList:Add",
+    "TaskList:UpdateTitle",
+    "TaskList:UpdateArchived",
+    "TaskList:Reorder",
+    "TaskList:AddTask",
+    "TaskList:MoveTasks",
+    "TaskList:CopyTasks",
+    "TaskList:ReorderTasks",
+    "TaskList:DuplicateTasks"
+  ]
+}
