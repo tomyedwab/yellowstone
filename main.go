@@ -41,7 +41,7 @@ func initApplication(application *applib.Application) error {
 }
 
 func main() {
-	application, err := applib.Init("0.0.1")
+	application, err := applib.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
