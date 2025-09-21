@@ -39,15 +39,13 @@ mkdir -p "$BUILD_DIR/pkg/bin"
 
 # Build the Go binary
 "$GO_BIN" build -o "$BUILD_DIR/pkg/bin/app" ./main.go
-cp manifest.json "$BUILD_DIR/pkg/"
+cp -p manifest.json "$BUILD_DIR/pkg/"
 
 # Create an archive
-cd "$BUILD_DIR/pkg"
-zip -r ../tasks.zip .
-cd ..
+(cd "$BUILD_DIR/pkg" &&  zip -r ../tasks.zip .)
 
 # Generate MD5 hash
-md5sum tasks.zip | cut -d' ' -f1 > tasks.md5
+cat "$BUILD_DIR/pkg/bin/app" "$BUILD_DIR/pkg/manifest.json" | md5sum | cut -d' ' -f1 > tasks.md5
 
 echo "Build complete:"
 echo "  Binary: $BUILD_DIR/tasks.zip"
