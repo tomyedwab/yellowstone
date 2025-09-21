@@ -52,14 +52,26 @@ class TaskListAdapter : RecyclerView.Adapter<TaskListAdapter.TaskListViewHolder>
             val metadata = taskMetadata[taskList.id]
             if (metadata != null) {
                 val (totalTasks, completedTasks) = metadata
-                tvItemCount.text = "$totalTasks tasks, $completedTasks completed"
+                // For templates, only show task count, not completion status
+                if (taskList.category == "template") {
+                    tvItemCount.text = "$totalTasks tasks"
+                } else {
+                    tvItemCount.text = "$totalTasks tasks, $completedTasks completed"
+                }
                 tvItemCount.visibility = View.VISIBLE
             } else {
                 tvItemCount.visibility = View.GONE
             }
 
+            // Hide archive button for templates
+            if (taskList.category == "template") {
+                btnArchive.visibility = View.GONE
+            } else {
+                btnArchive.visibility = View.VISIBLE
+                btnArchive.setOnClickListener { onArchiveClick(taskList) }
+            }
+
             itemView.setOnClickListener { onItemClick(taskList) }
-            btnArchive.setOnClickListener { onArchiveClick(taskList) }
         }
     }
 

@@ -12,11 +12,13 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.TaskListAdapter
+import com.tomyedwab.yellowstone.adapters.TaskListItemTouchHelper
 import com.tomyedwab.yellowstone.models.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
 import com.tomyedwab.yellowstone.MainActivity
@@ -91,12 +93,30 @@ class TemplatesFragment : Fragment(), ConnectionServiceListener {
     }
 
     private fun setupRecyclerView() {
-        adapter = TaskListAdapter { taskList ->
-            // Handle item click - navigate to template detail
-            // TODO: Implement navigation to template detail
-        }
+        adapter = TaskListAdapter(
+            onItemClick = { taskList ->
+                // Handle item click - navigate to template detail
+                // TODO: Navigate to /templates/list/{templateId}
+                // This requires:
+                // 1. Create TemplateDetailFragment with layout and ViewModel
+                // 2. Add navigation action in mobile_navigation.xml
+                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_templates_to_detail, bundle)
+                // 4. Pass taskList.id as argument to the detail fragment
+            },
+            onArchiveClick = { taskList ->
+                // Templates don't have archive functionality according to spec
+            },
+            onReorderClick = { listId, afterListId ->
+                // Reorder the template
+                templatesViewModel?.reorderTemplate(listId, afterListId)
+            }
+        )
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(context)
+
+        // Set up drag-and-drop
+        val itemTouchHelper = ItemTouchHelper(TaskListItemTouchHelper(adapter))
+        itemTouchHelper.attachToRecyclerView(recyclerView)
     }
 
     private fun setupFab() {
@@ -107,11 +127,12 @@ class TemplatesFragment : Fragment(), ConnectionServiceListener {
 
     private fun showAddTemplateDialog() {
         val editText = EditText(requireContext()).apply {
-            hint = "Enter template name"
+            hint = "Enter template title"
+            requestFocus()
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Add New Template")
+            .setTitle("Create New Template")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
                 val title = editText.text.toString().trim()
@@ -121,6 +142,12 @@ class TemplatesFragment : Fragment(), ConnectionServiceListener {
             }
             .setNegativeButton("Cancel", null)
             .show()
+
+        editText.post {
+            editText.requestFocus()
+            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }
     }
 
     private fun observeViewModel() {
@@ -128,6 +155,10 @@ class TemplatesFragment : Fragment(), ConnectionServiceListener {
 
         viewModel.templates.observe(viewLifecycleOwner) { templates ->
             adapter.updateTaskLists(templates)
+        }
+
+        viewModel.taskMetadata.observe(viewLifecycleOwner) { metadata ->
+            adapter.updateTaskMetadata(metadata)
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
