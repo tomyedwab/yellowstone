@@ -18,11 +18,13 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.TaskListAdapter
+import com.tomyedwab.yellowstone.adapters.TaskListItemTouchHelper
 import com.tomyedwab.yellowstone.models.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
 import com.tomyedwab.yellowstone.MainActivity
@@ -97,12 +99,31 @@ class ListsFragment : Fragment(), ConnectionServiceListener {
     }
 
     private fun setupRecyclerView() {
-        adapter = TaskListAdapter { taskList ->
-            // Handle item click - navigate to task list detail
-            // TODO: Implement navigation to task list detail
-        }
+        adapter = TaskListAdapter(
+            onItemClick = { taskList ->
+                // Navigate to task list detail view
+                // TODO: Navigate to /list/{listId}
+                // This requires:
+                // 1. Create TaskListDetailFragment with layout and ViewModel
+                // 2. Add navigation action in mobile_navigation.xml
+                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_lists_to_detail, bundle)
+                // 4. Pass taskList.id as argument to the detail fragment
+            },
+            onArchiveClick = { taskList ->
+                // Archive the list
+                listsViewModel?.archiveTaskList(taskList.id)
+            },
+            onReorderClick = { listId, afterListId ->
+                // Reorder the list
+                listsViewModel?.reorderTaskList(listId, afterListId)
+            }
+        )
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(context)
+
+        // Set up drag-and-drop
+        val itemTouchHelper = ItemTouchHelper(TaskListItemTouchHelper(adapter))
+        itemTouchHelper.attachToRecyclerView(recyclerView)
     }
 
     private fun setupFab() {
@@ -134,6 +155,10 @@ class ListsFragment : Fragment(), ConnectionServiceListener {
 
         viewModel.taskLists.observe(viewLifecycleOwner) { taskLists ->
             adapter.updateTaskLists(taskLists)
+        }
+
+        viewModel.taskMetadata.observe(viewLifecycleOwner) { metadata ->
+            adapter.updateTaskMetadata(metadata)
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->

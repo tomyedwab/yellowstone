@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.util.Log
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import com.google.gson.Gson
@@ -11,17 +12,13 @@ import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.tomyedwab.yellowstone.provider.connection.*
 import com.tomyedwab.yellowstone.utils.BinaryReader
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MultipartBody
-import android.util.Log
-import java.util.concurrent.ConcurrentHashMap
+import okhttp3.RequestBody.Companion.toRequestBody
 
-data class ComponentAsset(
-    val binaryAssetName: String,
-    val md5AssetName: String
-)
+data class ComponentAsset(val binaryAssetName: String, val md5AssetName: String)
 
 class ConnectionService : Service(), ViewModelStoreOwner {
 
@@ -50,7 +47,8 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     private var lastProcessedState: HubConnectionState? = null
 
     private val _viewModelStore = ViewModelStore()
-    override val viewModelStore: ViewModelStore get() = _viewModelStore
+    override val viewModelStore: ViewModelStore
+        get() = _viewModelStore
 
     inner class ConnectionBinder : Binder() {
         fun getService(): ConnectionService = this@ConnectionService
@@ -64,9 +62,7 @@ class ConnectionService : Service(), ViewModelStoreOwner {
         binaryReader = BinaryReader(this)
 
         // Start observing connection state changes
-        connectionStateProvider.connectionState.observeForever { state ->
-            handleStateChange(state)
-        }
+        connectionStateProvider.connectionState.observeForever { state -> handleStateChange(state) }
 
         // Component hashes will be loaded when initializeComponentAssets() is called
     }
@@ -101,9 +97,10 @@ class ConnectionService : Service(), ViewModelStoreOwner {
             componentAssetMap.forEach { (componentName, assetInfo) ->
                 try {
                     // Read MD5 hash from assets
-                    val md5Hash = assets.open(assetInfo.md5AssetName).use { inputStream ->
-                        inputStream.bufferedReader().readText().trim()
-                    }
+                    val md5Hash =
+                            assets.open(assetInfo.md5AssetName).use { inputStream ->
+                                inputStream.bufferedReader().readText().trim()
+                            }
                     componentHashes[componentName] = md5Hash
                     Log.i("ConnectionService", "Loaded hash for $componentName: $md5Hash")
                 } catch (e: Exception) {
@@ -129,13 +126,20 @@ class ConnectionService : Service(), ViewModelStoreOwner {
 
                 val assetInfo = componentAssetMap[componentName]
                 if (assetInfo != null) {
-                    val binaryData = assets.open(assetInfo.binaryAssetName).use { inputStream ->
-                        inputStream.readBytes()
-                    }
-                    Log.i("ConnectionService", "Loaded binary for $componentName: ${binaryData.size} bytes")
+                    val binaryData =
+                            assets.open(assetInfo.binaryAssetName).use { inputStream ->
+                                inputStream.readBytes()
+                            }
+                    Log.i(
+                            "ConnectionService",
+                            "Loaded binary for $componentName: ${binaryData.size} bytes"
+                    )
                     binaryData
                 } else {
-                    Log.w("ConnectionService", "No asset mapping found for component: $componentName")
+                    Log.w(
+                            "ConnectionService",
+                            "No asset mapping found for component: $componentName"
+                    )
                     null
                 }
             } catch (e: Exception) {
@@ -153,7 +157,9 @@ class ConnectionService : Service(), ViewModelStoreOwner {
         when (state.state) {
             ConnectionState.CONNECTING -> handleConnectingState(state)
             ConnectionState.CONNECTED -> handleConnectedState(state)
-            else -> { /* No action needed for other states */ }
+            else -> {
+                /* No action needed for other states */
+            }
         }
     }
 
@@ -163,52 +169,48 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 when {
                     // Case 1: Ready to wait for event sync
                     state.loginAccount != null &&
-                    state.refreshToken != null &&
-                    state.accessToken != null &&
-                    state.backendComponentIDs != null -> {
+                            state.refreshToken != null &&
+                            state.accessToken != null &&
+                            state.backendComponentIDs != null -> {
                         waitForEventSync(
-                            state.loginAccount.url,
-                            state.refreshToken,
-                            state.accessToken,
-                            state.backendComponentIDs
+                                state.loginAccount.url,
+                                state.refreshToken,
+                                state.accessToken,
+                                state.backendComponentIDs
                         )
                     }
 
                     // Case 2: Ready to register app components
                     state.loginAccount != null &&
-                    state.refreshToken != null &&
-                    state.accessToken != null -> {
+                            state.refreshToken != null &&
+                            state.accessToken != null -> {
                         sendAppRegistrationRequest(
-                            state.loginAccount.url,
-                            state.refreshToken,
-                            state.accessToken
+                                state.loginAccount.url,
+                                state.refreshToken,
+                                state.accessToken
                         )
                     }
 
                     // Case 3: Need to get access token
-                    state.loginAccount != null &&
-                    state.refreshToken != null -> {
-                        sendAccessTokenRequest(
-                            state.loginAccount.url,
-                            state.refreshToken
-                        )
+                    state.loginAccount != null && state.refreshToken != null -> {
+                        sendAccessTokenRequest(state.loginAccount.url, state.refreshToken)
                     }
 
                     // Case 4: Need to login with username/password
                     state.loginAccount != null &&
-                    state.loginPassword != null &&
-                    state.refreshToken == null -> {
+                            state.loginPassword != null &&
+                            state.refreshToken == null -> {
                         sendLoginRequest(
-                            state.loginAccount.url,
-                            state.loginAccount.id, // Using id as username
-                            state.loginPassword,
-                            state.loginAccount
+                                state.loginAccount.url,
+                                state.loginAccount.id, // Using id as username
+                                state.loginPassword,
+                                state.loginAccount
                         )
                     }
                 }
             } catch (e: Exception) {
                 connectionStateProvider.dispatch(
-                    ConnectionAction.ConnectionFailed("Connection error: ${e.message}")
+                        ConnectionAction.ConnectionFailed("Connection error: ${e.message}")
                 )
             }
         }
@@ -217,65 +219,75 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     private fun handleConnectedState(state: HubConnectionState) {
         // Start polling for changes when connected
         if (state.loginAccount != null &&
-            state.refreshToken != null &&
-            state.accessToken != null &&
-            state.backendEventIDs != null) {
+                        state.refreshToken != null &&
+                        state.accessToken != null &&
+                        state.backendEventIDs != null
+        ) {
 
             // Publish any pending events in parallel with polling
             if (state.pendingEvents.isNotEmpty()) {
                 serviceScope.launch {
                     publishPendingEvents(
-                        state.loginAccount.url,
-                        state.refreshToken,
-                        state.accessToken,
-                        state.pendingEvents
+                            state.loginAccount.url,
+                            state.refreshToken,
+                            state.accessToken,
+                            state.pendingEvents
                     )
                 }
             }
 
             serviceScope.launch {
                 pollForChanges(
-                    state.loginAccount.url,
-                    state.refreshToken,
-                    state.accessToken,
-                    state.backendEventIDs
+                        state.loginAccount.url,
+                        state.refreshToken,
+                        state.accessToken,
+                        state.backendEventIDs
                 )
             }
         }
     }
 
     private suspend fun publishPendingEvents(
-        url: String,
-        refreshToken: String,
-        accessToken: String,
-        pendingEvents: List<PendingEvent>
+            url: String,
+            refreshToken: String,
+            accessToken: String,
+            pendingEvents: List<PendingEvent>
     ) {
         try {
             for (event in pendingEvents) {
                 val eventJson = gson.toJson(event)
                 val requestBody = eventJson.toRequestBody(jsonMediaType)
 
-                val response = authService.fetchAuthenticated(
-                    "$url/events/publish",
-                    refreshToken,
-                    accessToken,
-                    "POST",
-                    requestBody
-                )
+                val response =
+                        authService.fetchAuthenticated(
+                                "$url/events/publish",
+                                refreshToken,
+                                accessToken,
+                                "POST",
+                                requestBody
+                        )
 
                 response.use {
                     if (it.isSuccessful) {
-                        Log.i("ConnectionService", "Successfully published event: ${event.clientId}")
-                        connectionStateProvider.dispatch(ConnectionAction.EventPublished(event.clientId))
+                        Log.i(
+                                "ConnectionService",
+                                "Successfully published event: ${event.clientId}"
+                        )
+                        connectionStateProvider.dispatch(
+                                ConnectionAction.EventPublished(event.clientId)
+                        )
                     } else {
-                        Log.e("ConnectionService", "Failed to publish event ${event.clientId}: ${it.code}")
+                        Log.e(
+                                "ConnectionService",
+                                "Failed to publish event ${event.clientId}: ${it.code} - ${it.body?.string()}"
+                        )
                         throw Exception("Event publishing failed: ${it.code}")
                     }
                 }
             }
         } catch (e: UnauthenticatedError) {
             connectionStateProvider.dispatch(
-                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: Exception) {
             Log.e("ConnectionService", "Error publishing events: ${e.message}", e)
@@ -284,19 +296,19 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     }
 
     private suspend fun sendLoginRequest(
-        url: String,
-        username: String,
-        password: String,
-        account: HubAccount
+            url: String,
+            username: String,
+            password: String,
+            account: HubAccount
     ) {
         try {
             val refreshToken = authService.doLogin(url, username, password)
             connectionStateProvider.dispatch(
-                ConnectionAction.StartConnection(account, refreshToken)
+                    ConnectionAction.StartConnection(account, refreshToken)
             )
         } catch (e: Exception) {
             connectionStateProvider.dispatch(
-                ConnectionAction.ConnectionFailed("Login failed: ${e.message}")
+                    ConnectionAction.ConnectionFailed("Login failed: ${e.message}")
             )
         }
     }
@@ -305,19 +317,19 @@ class ConnectionService : Service(), ViewModelStoreOwner {
         try {
             val (accessToken, newRefreshToken) = authService.refreshAccessToken(url, refreshToken)
             connectionStateProvider.dispatch(
-                ConnectionAction.ReceivedAccessToken(accessToken, newRefreshToken)
+                    ConnectionAction.ReceivedAccessToken(accessToken, newRefreshToken)
             )
         } catch (e: Exception) {
             connectionStateProvider.dispatch(
-                ConnectionAction.ConnectionFailed("Token refresh failed: ${e.message}")
+                    ConnectionAction.ConnectionFailed("Token refresh failed: ${e.message}")
             )
         }
     }
 
     private suspend fun sendAppRegistrationRequest(
-        url: String,
-        refreshToken: String,
-        accessToken: String
+            url: String,
+            refreshToken: String,
+            accessToken: String
     ) {
         try {
             if (componentHashes.isEmpty()) {
@@ -327,20 +339,23 @@ class ConnectionService : Service(), ViewModelStoreOwner {
             val hashesJson = gson.toJson(componentHashes)
             val requestBody = hashesJson.toRequestBody(jsonMediaType)
 
-            val response = authService.fetchAuthenticated(
-                "$url/apps/register",
-                refreshToken,
-                accessToken,
-                "POST",
-                requestBody
-            )
+            val response =
+                    authService.fetchAuthenticated(
+                            "$url/apps/register",
+                            refreshToken,
+                            accessToken,
+                            "POST",
+                            requestBody
+                    )
 
             response.use {
                 if (it.isSuccessful) {
-                    val responseJson = gson.fromJson(
-                        it.body?.string(),
-                        object : TypeToken<Map<String, String?>>() {}.type
-                    ) as Map<String, String?>
+                    val responseJson =
+                            gson.fromJson(
+                                    it.body?.string(),
+                                    object : TypeToken<Map<String, String?>>() {}.type
+                            ) as
+                                    Map<String, String?>
 
                     val componentIDs = mutableMapOf<String, String>()
 
@@ -351,14 +366,22 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                         } else {
                             // Component needs to be installed - send binary to server
                             Log.i("ConnectionService", "Installing component: $appName")
-                            val installedInstanceId = componentHashes[appName]?.let { it1 ->
-                                installComponent(url, refreshToken, accessToken, appName,
-                                    it1
-                                )
-                            }
+                            val installedInstanceId =
+                                    componentHashes[appName]?.let { it1 ->
+                                        installComponent(
+                                                url,
+                                                refreshToken,
+                                                accessToken,
+                                                appName,
+                                                it1
+                                        )
+                                    }
                             if (installedInstanceId != null) {
                                 componentIDs[appName] = installedInstanceId
-                                Log.i("ConnectionService", "Successfully installed $appName with instance ID: $installedInstanceId")
+                                Log.i(
+                                        "ConnectionService",
+                                        "Successfully installed $appName with instance ID: $installedInstanceId"
+                                )
                             } else {
                                 throw Exception("Failed to install component: $appName")
                             }
@@ -366,9 +389,7 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                     }
 
                     connectionStateProvider.dispatch(
-                        ConnectionAction.MappedComponentIDs(
-                            BackendComponentIDs(componentIDs)
-                        )
+                            ConnectionAction.MappedComponentIDs(BackendComponentIDs(componentIDs))
                     )
                 } else {
                     throw Exception("App registration failed: ${it.code}")
@@ -376,11 +397,11 @@ class ConnectionService : Service(), ViewModelStoreOwner {
             }
         } catch (e: UnauthenticatedError) {
             connectionStateProvider.dispatch(
-                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: Exception) {
             connectionStateProvider.dispatch(
-                ConnectionAction.ConnectionFailed("App registration failed: ${e.message}")
+                    ConnectionAction.ConnectionFailed("App registration failed: ${e.message}")
             )
         }
     }
@@ -394,11 +415,11 @@ class ConnectionService : Service(), ViewModelStoreOwner {
      * @return The instance ID returned by the server, or null if installation failed
      */
     private suspend fun installComponent(
-        url: String,
-        refreshToken: String,
-        accessToken: String,
-        componentName: String,
-        componentHash: String
+            url: String,
+            refreshToken: String,
+            accessToken: String,
+            componentName: String,
+            componentHash: String
     ): String? {
         return try {
             // Load the binary for this component
@@ -409,22 +430,28 @@ class ConnectionService : Service(), ViewModelStoreOwner {
             }
 
             // Create multipart request with the binary
-            val binaryRequestBody = binaryData.toRequestBody("application/octet-stream".toMediaType())
-            val multipartBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("content", "$componentName-binary", binaryRequestBody)
-                .addFormDataPart("hash", componentHash)
-                .build()
+            val binaryRequestBody =
+                    binaryData.toRequestBody("application/octet-stream".toMediaType())
+            val multipartBody =
+                    MultipartBody.Builder()
+                            .setType(MultipartBody.FORM)
+                            .addFormDataPart("content", "$componentName-binary", binaryRequestBody)
+                            .addFormDataPart("hash", componentHash)
+                            .build()
 
-            Log.i("ConnectionService", "Uploading binary for $componentName (${binaryData.size} bytes)")
-
-            val response = authService.fetchAuthenticated(
-                "$url/apps/install",
-                refreshToken,
-                accessToken,
-                "POST",
-                multipartBody
+            Log.i(
+                    "ConnectionService",
+                    "Uploading binary for $componentName (${binaryData.size} bytes)"
             )
+
+            val response =
+                    authService.fetchAuthenticated(
+                            "$url/apps/install",
+                            refreshToken,
+                            accessToken,
+                            "POST",
+                            multipartBody
+                    )
 
             response.use {
                 if (it.isSuccessful) {
@@ -433,33 +460,46 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                     val instanceId = responseJson.get("instanceId")?.asString
 
                     if (instanceId != null) {
-                        Log.i("ConnectionService", "Component $componentName installed with instance ID: $instanceId")
+                        Log.i(
+                                "ConnectionService",
+                                "Component $componentName installed with instance ID: $instanceId"
+                        )
                         instanceId
                     } else {
-                        Log.e("ConnectionService", "Server did not return instance_id for $componentName")
+                        Log.e(
+                                "ConnectionService",
+                                "Server did not return instance_id for $componentName"
+                        )
                         null
                     }
                 } else {
-                    Log.e("ConnectionService", "Component installation failed for $componentName: ${it.code} ${it.message}")
+                    Log.e(
+                            "ConnectionService",
+                            "Component installation failed for $componentName: ${it.code} ${it.message}"
+                    )
                     null
                 }
             }
         } catch (e: UnauthenticatedError) {
             connectionStateProvider.dispatch(
-                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
             null
         } catch (e: Exception) {
-            Log.e("ConnectionService", "Exception during component installation for $componentName", e)
+            Log.e(
+                    "ConnectionService",
+                    "Exception during component installation for $componentName",
+                    e
+            )
             null
         }
     }
 
     private suspend fun waitForEventSync(
-        url: String,
-        refreshToken: String,
-        accessToken: String,
-        backendComponentIDs: BackendComponentIDs
+            url: String,
+            refreshToken: String,
+            accessToken: String,
+            backendComponentIDs: BackendComponentIDs
     ) {
         try {
             val initialEventIds = mutableMapOf<String, Int>()
@@ -471,25 +511,28 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 val eventsJson = gson.toJson(initialEventIds)
                 val requestBody = eventsJson.toRequestBody(jsonMediaType)
 
-                val response = authService.fetchAuthenticated(
-                    "$url/events/poll",
-                    refreshToken,
-                    accessToken,
-                    "POST",
-                    requestBody
-                )
+                val response =
+                        authService.fetchAuthenticated(
+                                "$url/events/poll",
+                                refreshToken,
+                                accessToken,
+                                "POST",
+                                requestBody
+                        )
 
                 response.use {
                     if (it.isSuccessful) {
-                        val data = gson.fromJson(
-                            it.body?.string(),
-                            object : TypeToken<Map<String, Int>>() {}.type
-                        ) as Map<String, Int>
+                        val data =
+                                gson.fromJson(
+                                        it.body?.string(),
+                                        object : TypeToken<Map<String, Int>>() {}.type
+                                ) as
+                                        Map<String, Int>
 
                         val foundUninitialized = data.values.any { eventId -> eventId == -1 }
                         if (!foundUninitialized) {
                             connectionStateProvider.dispatch(
-                                ConnectionAction.ConnectionSucceeded(data)
+                                    ConnectionAction.ConnectionSucceeded(data)
                             )
                             return
                         }
@@ -500,20 +543,20 @@ class ConnectionService : Service(), ViewModelStoreOwner {
             }
         } catch (e: UnauthenticatedError) {
             connectionStateProvider.dispatch(
-                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: Exception) {
             connectionStateProvider.dispatch(
-                ConnectionAction.ConnectionFailed("Event sync failed: ${e.message}")
+                    ConnectionAction.ConnectionFailed("Event sync failed: ${e.message}")
             )
         }
     }
 
     private suspend fun pollForChanges(
-        url: String,
-        refreshToken: String,
-        accessToken: String,
-        initialEventIDs: Map<String, Int>
+            url: String,
+            refreshToken: String,
+            accessToken: String,
+            initialEventIDs: Map<String, Int>
     ) {
         var currentEventIDs = initialEventIDs
 
@@ -524,30 +567,31 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 val eventsJson = gson.toJson(currentEventIDs)
                 val requestBody = eventsJson.toRequestBody(jsonMediaType)
 
-                val response = authService.fetchAuthenticated(
-                    "$url/events/poll",
-                    refreshToken,
-                    accessToken,
-                    "POST",
-                    requestBody
-                )
+                val response =
+                        authService.fetchAuthenticated(
+                                "$url/events/poll",
+                                refreshToken,
+                                accessToken,
+                                "POST",
+                                requestBody
+                        )
 
                 response.use {
                     when (it.code) {
                         200 -> {
-                            val data = gson.fromJson(
-                                it.body?.string(),
-                                object : TypeToken<Map<String, Int>>() {}.type
-                            ) as Map<String, Int>
+                            val data =
+                                    gson.fromJson(
+                                            it.body?.string(),
+                                            object : TypeToken<Map<String, Int>>() {}.type
+                                    ) as
+                                            Map<String, Int>
                             currentEventIDs = data
-                            connectionStateProvider.dispatch(
-                                ConnectionAction.EventsUpdated(data)
-                            )
+                            connectionStateProvider.dispatch(ConnectionAction.EventsUpdated(data))
                         }
                         304 -> {
                             // Not modified - dispatch the same event IDs
                             connectionStateProvider.dispatch(
-                                ConnectionAction.EventsUpdated(currentEventIDs)
+                                    ConnectionAction.EventsUpdated(currentEventIDs)
                             )
                         }
                         else -> {
@@ -557,12 +601,12 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 }
             } catch (e: UnauthenticatedError) {
                 connectionStateProvider.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                        ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
                 )
             } catch (e: Exception) {
                 // In production, this should transition to "reconnecting" state
                 connectionStateProvider.dispatch(
-                    ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
+                        ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
                 )
                 break // Exit the polling loop on error
             }

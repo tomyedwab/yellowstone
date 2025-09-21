@@ -281,9 +281,9 @@ WHERE ttl1.list_id = $1 AND tl.category = 'label'
 `
 
 type TaskListMetadataV1 struct {
-	ListId    int `db:"list_id"`
-	Total     int `db:"total"`
-	Completed int `db:"completed"`
+	ListId    int `db:"list_id" json:"ListId"`
+	Total     int `db:"total" json:"TotalTasks"`
+	Completed int `db:"completed" json:"CompletedTasks"`
 }
 
 type TaskRecentCommentV1 struct {

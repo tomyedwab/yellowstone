@@ -247,7 +247,9 @@ func InitTaskListHandlers(db *database.Database) {
 
 	http.HandleFunc("/api/tasklist/metadata", func(w http.ResponseWriter, r *http.Request) {
 		resp, err := taskListDBMetadata(db.GetDB())
-		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
+		httputils.HandleAPIResponse(w, r, map[string][]TaskListMetadataV1{
+			"Metadata": resp,
+		}, err, http.StatusInternalServerError)
 	})
 
 	http.HandleFunc("/api/tasklist/recent_comments", func(w http.ResponseWriter, r *http.Request) {
