@@ -13,7 +13,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
-import com.tomyedwab.yellowstone.adapters.TaskListAdapter
+import com.tomyedwab.yellowstone.adapters.ArchivedTaskListAdapter
 import com.tomyedwab.yellowstone.models.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
 import com.tomyedwab.yellowstone.MainActivity
@@ -21,7 +21,7 @@ import com.tomyedwab.yellowstone.MainActivity
 class ArchivedFragment : Fragment(), ConnectionServiceListener {
 
     private var archivedViewModel: ArchivedViewModel? = null
-    private lateinit var adapter: TaskListAdapter
+    private lateinit var adapter: ArchivedTaskListAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
     private lateinit var errorText: TextView
@@ -75,7 +75,8 @@ class ArchivedFragment : Fragment(), ConnectionServiceListener {
         if (!isViewModelInitialized) {
             val factory = ArchivedViewModelFactory(
                 connectionService.getDataViewService(),
-                connectionService.getConnectionStateProvider().connectionState
+                connectionService.getConnectionStateProvider().connectionState,
+                connectionService.getConnectionStateProvider()
             )
             archivedViewModel = ViewModelProvider(this, factory)[ArchivedViewModel::class.java]
             isViewModelInitialized = true
@@ -84,10 +85,21 @@ class ArchivedFragment : Fragment(), ConnectionServiceListener {
     }
 
     private fun setupRecyclerView() {
-        adapter = TaskListAdapter { taskList ->
-            // Handle item click - navigate to archived item detail or restore
-            // TODO: Implement navigation to archived item detail
-        }
+        adapter = ArchivedTaskListAdapter(
+            onItemClick = { taskList ->
+                // Navigate to archived item detail view
+                // TODO: Navigate to /archived/list/{listId}
+                // This requires:
+                // 1. Create ArchivedListDetailFragment with layout and ViewModel
+                // 2. Add navigation action in mobile_navigation.xml
+                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_archived_to_detail, bundle)
+                // 4. Pass taskList.id as argument to the detail fragment
+            },
+            onUnarchiveClick = { taskList ->
+                // Unarchive the list - restore to active state
+                archivedViewModel?.unarchiveTaskList(taskList.id)
+            }
+        )
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(context)
     }
@@ -97,6 +109,10 @@ class ArchivedFragment : Fragment(), ConnectionServiceListener {
 
         viewModel.archivedItems.observe(viewLifecycleOwner) { archivedItems ->
             adapter.updateTaskLists(archivedItems)
+        }
+
+        viewModel.taskMetadata.observe(viewLifecycleOwner) { metadata ->
+            adapter.updateTaskMetadata(metadata)
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
