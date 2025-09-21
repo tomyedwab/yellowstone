@@ -6,7 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/tomyedwab/yesterday/applib"
-	"tomyedwab.com/yellowstone-server/state"
+	"tomyedwab.com/yellowstone-server/tasks/state"
 )
 
 const Version = "1.0.9"

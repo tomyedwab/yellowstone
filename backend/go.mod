@@ -10,4 +10,4 @@ require (
 
 require github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 
-replace github.com/tomyedwab/yesterday => ../yesterday
+replace github.com/tomyedwab/yesterday => ../../yesterday
