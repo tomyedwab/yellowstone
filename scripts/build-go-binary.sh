@@ -37,17 +37,19 @@ BUILD_DIR="$(dirname "$0")/../build"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/pkg/bin"
 
-# Build the Go binary
-"$GO_BIN" build -o "$BUILD_DIR/pkg/bin/app" ./main.go
-cp -p manifest.json "$BUILD_DIR/pkg/"
+# Build the Go
+BACKEND_DIR="$(dirname "$0")/../backend"
+(cd $BACKEND_DIR &&
+  "$GO_BIN" build -o "../build/pkg/bin/app" ./tasks/main.go &&
+  cp -p tasks/manifest.json ../build/pkg/
+)
 
 # Create an archive
 (cd "$BUILD_DIR/pkg" &&  zip -r ../tasks.zip .)
 
 # Generate MD5 hash
-cat "$BUILD_DIR/pkg/bin/app" "$BUILD_DIR/pkg/manifest.json" | md5sum | cut -d' ' -f1 > tasks.md5
+cat "$BUILD_DIR/pkg/bin/app" "$BUILD_DIR/pkg/manifest.json" | md5sum | cut -d' ' -f1 > "$BUILD_DIR/tasks.md5"
 
 echo "Build complete:"
 echo "  Binary: $BUILD_DIR/tasks.zip"
 echo "  MD5: $BUILD_DIR/tasks.md5"
-echo "  MD5 Hash: $(cat tasks.md5)"
