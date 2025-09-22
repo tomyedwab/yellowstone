@@ -35,6 +35,11 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".ui.history.TaskHistoryActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.tasks.TaskListPageActivity" />
+
         <service
             android:name=".services.connection.ConnectionService"
             android:enabled="true"

@@ -127,12 +127,12 @@ ORDER BY created_at DESC;
 `
 
 type TaskHistoryV1 struct {
-	Id            int       `db:"id"`
-	TaskId        int       `db:"task_id"`
-	UpdateType    string    `db:"update_type"`
-	SystemComment string    `db:"system_comment"`
-	UserComment   *string   `db:"user_comment"`
-	CreatedAt     time.Time `db:"created_at"`
+	Id            int       `db:"id" json:"id"`
+	TaskId        int       `db:"task_id" json:"taskId"`
+	UpdateType    string    `db:"update_type" json:"updateType"`
+	SystemComment string    `db:"system_comment" json:"systemComment"`
+	UserComment   *string   `db:"user_comment" json:"userComment"`
+	CreatedAt     time.Time `db:"created_at" json:"createdAt"`
 }
 
 type TaskHistoryV1Response struct {

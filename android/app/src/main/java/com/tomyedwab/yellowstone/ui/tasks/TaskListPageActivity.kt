@@ -24,6 +24,7 @@ import com.tomyedwab.yellowstone.adapters.TaskAdapter
 import com.tomyedwab.yellowstone.adapters.TaskItemTouchHelper
 import com.tomyedwab.yellowstone.models.Task
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
+import com.tomyedwab.yellowstone.ui.history.TaskHistoryActivity
 
 class TaskListPageActivity : AppCompatActivity() {
 
@@ -106,8 +107,8 @@ class TaskListPageActivity : AppCompatActivity() {
         adapter = TaskAdapter(
             onItemClick = { task ->
                 if (!isSelectionMode) {
-                    // Navigate to task history
-                    // TODO: Navigate to /list/{listId}/task/{taskId}/history
+                    val intent = TaskHistoryActivity.createIntent(this@TaskListPageActivity, listId, task.id)
+                    startActivity(intent)
                 }
             },
             onCheckboxClick = { task ->
