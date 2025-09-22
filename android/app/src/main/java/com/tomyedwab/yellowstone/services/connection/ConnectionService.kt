@@ -46,6 +46,9 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     // Track current state to avoid redundant operations
     private var lastProcessedState: HubConnectionState? = null
 
+    // Track polling state to prevent multiple polling threads
+    private var isPolling = false
+
     private val _viewModelStore = ViewModelStore()
     override val viewModelStore: ViewModelStore
         get() = _viewModelStore
@@ -236,13 +239,21 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 }
             }
 
-            serviceScope.launch {
-                pollForChanges(
-                        state.loginAccount.url,
-                        state.refreshToken,
-                        state.accessToken,
-                        state.backendEventIDs
-                )
+            // Only start polling if not already polling
+            if (!isPolling) {
+                isPolling = true
+                serviceScope.launch {
+                    try {
+                        pollForChanges(
+                                state.loginAccount.url,
+                                state.refreshToken,
+                                state.accessToken,
+                                state.backendEventIDs
+                        )
+                    } finally {
+                        isPolling = false
+                    }
+                }
             }
         }
     }
