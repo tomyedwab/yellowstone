@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/YellowstoneTaskCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
     android:clickable="true"
     android:foreground="?android:attr/selectableItemBackground">
 
@@ -14,7 +12,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:background="@android:color/transparent">
 
         <CheckBox
             android:id="@+id/cb_task_completed"
@@ -39,16 +38,14 @@
                 android:id="@+id/tv_task_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@android:color/black" />
+                android:textAppearance="@style/YellowstoneTextAppearance.TaskTitle" />
 
             <TextView
                 android:id="@+id/tv_due_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
+                android:textAppearance="@style/YellowstoneTextAppearance.TaskSubtitle"
                 android:visibility="gone" />
 
         </LinearLayout>
@@ -60,7 +57,8 @@
             android:layout_marginStart="8dp"
             android:src="@drawable/ic_drag_handle"
             android:contentDescription="Reorder handle"
-            android:visibility="visible" />
+            android:visibility="visible"
+            app:tint="@color/primary" />
 
     </LinearLayout>
 

@@ -1,16 +1,39 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Night theme - Same as day theme since Yellowstone is dark-only -->
     <style name="Theme.Yellowstone" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/surface_background</item>
+        <item name="colorOnPrimary">@color/surface_background</item>
+
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
-        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorSecondary">@color/selection_highlight</item>
+        <item name="colorSecondaryVariant">@color/border_color</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/surface_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/surface_background</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="android:statusBarColor">@color/surface_background</item>
+        <item name="android:navigationBarColor">@color/surface_background</item>
+
+        <!-- App bar styling -->
+        <item name="actionBarStyle">@style/YellowstoneActionBar</item>
+
+        <!-- Text appearances -->
+        <item name="textAppearanceHeadline6">@style/YellowstoneTextAppearance.AppBarTitle</item>
+        <item name="textAppearanceBody1">@style/YellowstoneTextAppearance.Body</item>
+        <item name="textAppearanceBody2">@style/YellowstoneTextAppearance.BodySecondary</item>
+
+        <!-- Card styling -->
+        <item name="materialCardViewStyle">@style/YellowstoneCardView</item>
+
+        <!-- Window settings for full dark theme -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
 </resources>

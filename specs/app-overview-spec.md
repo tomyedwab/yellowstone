@@ -130,14 +130,6 @@ In backend/tasks/state/task_history.go:
 5. Manage individual tasks
 6. Access task history and comments
 
-## Color Scheme
-- **Primary**: Light blue-white (#f6fbff)
-- **Background**: Dark blue (#111e2a)
-- **Surface**: Variations of dark theme
-- **Borders**: Dark blue-gray (#182631)
-- **Selection**: Medium blue-gray (#314150)
-- **Indicator**: Light blue (#7faad0)
-
 ## Future Enhancements (Based on TODOs)
 - Improved error handling with user notifications
 - Archived list category grouping

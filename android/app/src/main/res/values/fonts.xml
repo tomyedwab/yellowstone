@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Font families for Yellowstone theme -->
+    <!-- Note: Using system fonts as fallback since Google Fonts require additional setup -->
+
+    <!-- Text styles based on theme specification -->
+    <style name="YellowstoneTextAppearance" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">sans-serif</item> <!-- Roboto fallback -->
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.AppBarTitle" parent="YellowstoneTextAppearance">
+        <item name="fontFamily">sans-serif-medium</item> <!-- Archivo medium fallback -->
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.TaskTitle" parent="YellowstoneTextAppearance">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/task_title</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.TaskSubtitle" parent="YellowstoneTextAppearance">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/task_subtitle</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.TaskComments" parent="YellowstoneTextAppearance">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/task_comments</item>
+        <item name="android:textStyle">italic</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.ChipLabel" parent="YellowstoneTextAppearance">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/chip_label</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.Body" parent="YellowstoneTextAppearance">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+
+    <style name="YellowstoneTextAppearance.BodySecondary" parent="YellowstoneTextAppearance">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="fontFamily">sans-serif</item>
+    </style>
+</resources>

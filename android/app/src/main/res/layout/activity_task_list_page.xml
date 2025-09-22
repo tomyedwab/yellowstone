@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface_background"
     tools:context=".ui.tasks.TaskListPageActivity">
 
     <androidx.recyclerview.widget.RecyclerView
@@ -27,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="Error loading data"
-        android:textColor="@android:color/holo_red_dark"
+        android:textAppearance="@style/YellowstoneTextAppearance.Body"
         android:visibility="gone" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -39,6 +40,8 @@
         android:layout_marginBottom="16dp"
         android:src="@android:drawable/ic_input_add"
         android:contentDescription="Add new task"
+        app:backgroundTint="@color/selection_highlight"
+        app:tint="@color/primary"
         app:layout_behavior="com.google.android.material.floatingactionbutton.FloatingActionButton$Behavior" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

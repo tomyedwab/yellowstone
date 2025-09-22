@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Legacy colors (kept for compatibility) -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -7,6 +8,32 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Yellowstone Theme Colors -->
+    <!-- Primary Colors -->
+    <color name="primary">#FFF6FBFF</color>
+    <color name="surface_background">#FF111E2A</color>
+
+    <!-- Secondary Colors -->
+    <color name="border_color">#FF182631</color>
+    <color name="selection_highlight">#FF314150</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#FFF6FBFF</color>
+    <color name="text_secondary">#B3FFFFFF</color> <!-- 70% opacity white -->
+    <color name="text_hint">#80FFFFFF</color> <!-- 50% opacity white -->
+
+    <!-- Component Colors -->
+    <color name="chip_background">#42000000</color> <!-- 26% opacity black -->
+    <color name="chip_border">#4DFFFFFF</color> <!-- 30% opacity white -->
+
+    <!-- Task specific colors -->
+    <color name="task_title">#FFFFFFFF</color>
+    <color name="task_subtitle">#B3FFFFFF</color> <!-- 70% opacity white -->
+    <color name="task_comments">#B3FFFFFF</color> <!-- 70% opacity white -->
+    <color name="chip_label">#B3FFFFFF</color> <!-- 70% opacity white -->
+
+    <!-- Legacy card colors updated to match theme -->
     <color name="card_background">#FF182631</color>
     <color name="card_selected">#FF314150</color>
     <color name="card_border">#FF182631</color>
