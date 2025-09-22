@@ -3,6 +3,7 @@ package com.tomyedwab.yellowstone.ui.templates
 import com.tomyedwab.yellowstone.ConnectionServiceListener
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -95,16 +96,15 @@ class TemplatesFragment : Fragment(), ConnectionServiceListener {
     private fun setupRecyclerView() {
         adapter = TaskListAdapter(
             onItemClick = { taskList ->
-                // Handle item click - navigate to template detail
-                // TODO: Navigate to /templates/list/{templateId}
-                // This requires:
-                // 1. Create TemplateDetailFragment with layout and ViewModel
-                // 2. Add navigation action in mobile_navigation.xml
-                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_templates_to_detail, bundle)
-                // 4. Pass taskList.id as argument to the detail fragment
+                // Navigate to task list page activity
+                val intent = Intent(requireContext(), com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity::class.java)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_ID, taskList.id)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_TITLE, taskList.title)
+                startActivity(intent)
             },
             onArchiveClick = { taskList ->
-                // Templates don't have archive functionality according to spec
+                // Archive the list
+                templatesViewModel?.archiveTaskList(taskList.id)
             },
             onReorderClick = { listId, afterListId ->
                 // Reorder the template

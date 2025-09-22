@@ -39,11 +39,11 @@ Detailed view of a specific task list showing all tasks with management, reorder
   - Response: Array of labels associated with tasks (excluding list's own labels)
 
 ### List Event Publications
-- **`yellowstone:updateTaskListTitle`**: Updates list title
+- **`TaskList:UpdateTitle`**: Updates list title
   - Parameters: listId, title
-- **`yellowstone:updateTaskListArchived`**: Archives list
+- **`TaskList:UpdateArchived`**: Archives list
   - Parameters: listId, archived=true
-- **`yellowstone:updateTaskListArchived`**: Restores archived list
+- **`TaskList:UpdateArchived`**: Restores archived list
   - Parameters: listId, archived=false
 
 ### Batch Task Event Publications

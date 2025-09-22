@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Normal mode items -->
+    <item
+        android:id="@+id/action_edit_list"
+        android:title="Edit List"
+        android:icon="@drawable/ic_edit"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_archive_list"
+        android:title="Archive List"
+        android:icon="@drawable/ic_archive"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_toggle_selection"
+        android:title="Select Tasks"
+        android:icon="@drawable/ic_checklist"
+        app:showAsAction="ifRoom" />
+
+    <!-- Selection mode items -->
+    <item
+        android:id="@+id/action_batch_select"
+        android:title="Batch Select"
+        android:icon="@drawable/ic_select_all"
+        app:showAsAction="never"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/action_add_to_list"
+        android:title="Add to List"
+        android:icon="@drawable/ic_add_to_list"
+        app:showAsAction="never"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/action_copy"
+        android:title="Copy"
+        android:icon="@drawable/ic_copy"
+        app:showAsAction="never"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/action_move"
+        android:title="Move"
+        android:icon="@drawable/ic_move"
+        app:showAsAction="never"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/action_exit_selection"
+        android:title="Exit Selection"
+        android:icon="@drawable/ic_close"
+        app:showAsAction="ifRoom"
+        android:visible="false" />
+
+</menu>

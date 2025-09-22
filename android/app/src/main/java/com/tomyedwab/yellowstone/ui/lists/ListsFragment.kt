@@ -101,13 +101,11 @@ class ListsFragment : Fragment(), ConnectionServiceListener {
     private fun setupRecyclerView() {
         adapter = TaskListAdapter(
             onItemClick = { taskList ->
-                // Navigate to task list detail view
-                // TODO: Navigate to /list/{listId}
-                // This requires:
-                // 1. Create TaskListDetailFragment with layout and ViewModel
-                // 2. Add navigation action in mobile_navigation.xml
-                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_lists_to_detail, bundle)
-                // 4. Pass taskList.id as argument to the detail fragment
+                // Navigate to task list page activity
+                val intent = Intent(requireContext(), com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity::class.java)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_ID, taskList.id)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_TITLE, taskList.title)
+                startActivity(intent)
             },
             onArchiveClick = { taskList ->
                 // Archive the list

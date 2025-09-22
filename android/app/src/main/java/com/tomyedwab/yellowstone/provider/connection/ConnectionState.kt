@@ -28,7 +28,7 @@ data class PendingEvent(
     val clientId: String,
     val type: String,
     val timestamp: String,
-    val data: Map<String, Any>
+    val data: Map<String, Any?>
 )
 
 data class HubConnectionState(

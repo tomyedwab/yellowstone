@@ -2,6 +2,7 @@ package com.tomyedwab.yellowstone.ui.archived
 
 import com.tomyedwab.yellowstone.ConnectionServiceListener
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -37,7 +38,7 @@ class ArchivedFragment : Fragment(), ConnectionServiceListener {
         recyclerView = root.findViewById(R.id.rv_task_lists)
         progressBar = root.findViewById(R.id.progress_bar)
         errorText = root.findViewById(R.id.error_text)
-        
+
         // Hide FAB for archived items since we don't create new archived items directly
         val fabAdd = root.findViewById<View>(R.id.fab_add)
         fabAdd.visibility = View.GONE
@@ -87,13 +88,11 @@ class ArchivedFragment : Fragment(), ConnectionServiceListener {
     private fun setupRecyclerView() {
         adapter = ArchivedTaskListAdapter(
             onItemClick = { taskList ->
-                // Navigate to archived item detail view
-                // TODO: Navigate to /archived/list/{listId}
-                // This requires:
-                // 1. Create ArchivedListDetailFragment with layout and ViewModel
-                // 2. Add navigation action in mobile_navigation.xml
-                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_archived_to_detail, bundle)
-                // 4. Pass taskList.id as argument to the detail fragment
+                // Navigate to task list page activity
+                val intent = Intent(requireContext(), com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity::class.java)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_ID, taskList.id)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_TITLE, taskList.title)
+                startActivity(intent)
             },
             onUnarchiveClick = { taskList ->
                 // Unarchive the list - restore to active state

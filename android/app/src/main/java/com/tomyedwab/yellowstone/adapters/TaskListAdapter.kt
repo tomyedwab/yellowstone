@@ -60,16 +60,14 @@ class TaskListAdapter : RecyclerView.Adapter<TaskListAdapter.TaskListViewHolder>
                 }
                 tvItemCount.visibility = View.VISIBLE
             } else {
-                tvItemCount.visibility = View.GONE
+                // Fallback if no metadata available
+                tvItemCount.text = "0 tasks"
+                tvItemCount.visibility = View.VISIBLE
             }
 
             // Hide archive button for templates
-            if (taskList.category == "template") {
-                btnArchive.visibility = View.GONE
-            } else {
-                btnArchive.visibility = View.VISIBLE
-                btnArchive.setOnClickListener { onArchiveClick(taskList) }
-            }
+            btnArchive.visibility = View.VISIBLE
+            btnArchive.setOnClickListener { onArchiveClick(taskList) }
 
             itemView.setOnClickListener { onItemClick(taskList) }
         }

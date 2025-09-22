@@ -14,7 +14,20 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:background="@color/card_background">
+        android:gravity="center_vertical">
+
+        <CheckBox
+            android:id="@+id/cb_task_completed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp" />
+
+        <CheckBox
+            android:id="@+id/cb_task_selection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -23,32 +36,31 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tv_name"
+                android:id="@+id/tv_task_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white" />
+                android:textColor="@android:color/black" />
 
             <TextView
-                android:id="@+id/tv_item_count"
+                android:id="@+id/tv_due_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="@android:color/darker_gray"
+                android:visibility="gone" />
 
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/btn_unarchive"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center_vertical"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_unarchive"
-            android:contentDescription="Unarchive list"
-            android:padding="12dp" />
+        <ImageView
+            android:id="@+id/iv_task_reorder_handle"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_drag_handle"
+            android:contentDescription="Reorder handle"
+            android:visibility="visible" />
 
     </LinearLayout>
 

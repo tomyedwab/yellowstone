@@ -84,4 +84,16 @@ class LabelsViewModel(
                 )
         connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
     }
+
+    fun archiveTaskList(listId: Int) {
+        val event =
+                PendingEvent(
+                        clientId = UUID.randomUUID().toString(),
+                        type = "TaskList:UpdateArchived",
+                        timestamp = Instant.now().toString(),
+                        data = mapOf("listId" to listId, "archived" to true)
+                )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+
 }

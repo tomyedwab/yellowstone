@@ -3,6 +3,7 @@ package com.tomyedwab.yellowstone.ui.labels
 import com.tomyedwab.yellowstone.ConnectionServiceListener
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -96,18 +97,15 @@ class LabelsFragment : Fragment(), ConnectionServiceListener {
     private fun setupRecyclerView() {
         adapter = TaskListAdapter(
             onItemClick = { taskList ->
-                // Navigate to label detail view - /labels/list/{labelId}
-                Log.d("LabelsFragment", "Navigate to label detail: ${taskList.id}")
-                // TODO: Implement navigation to label detail
-                // This requires:
-                // 1. Create LabelDetailFragment with layout and ViewModel
-                // 2. Add navigation action in mobile_navigation.xml
-                // 3. Use NavController to navigate: findNavController().navigate(R.id.action_labels_to_detail, bundle)
-                // 4. Pass taskList.id as argument to the detail fragment
+                // Navigate to task list page activity
+                val intent = Intent(requireContext(), com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity::class.java)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_ID, taskList.id)
+                intent.putExtra(com.tomyedwab.yellowstone.ui.tasks.TaskListPageActivity.EXTRA_LIST_TITLE, taskList.title)
+                startActivity(intent)
             },
             onArchiveClick = { taskList ->
-                // Labels don't have archive functionality per spec
-                Log.d("LabelsFragment", "Archive not supported for labels")
+                // Archive the list
+                labelsViewModel?.archiveTaskList(taskList.id)
             },
             onReorderClick = { listId, afterListId ->
                 // Reorder the label
