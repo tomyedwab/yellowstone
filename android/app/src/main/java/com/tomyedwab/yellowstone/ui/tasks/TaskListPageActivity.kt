@@ -23,8 +23,12 @@ import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.TaskAdapter
 import com.tomyedwab.yellowstone.adapters.TaskItemTouchHelper
 import com.tomyedwab.yellowstone.models.Task
+import com.tomyedwab.yellowstone.models.TaskList
+import com.tomyedwab.yellowstone.models.TaskListResponse
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
+import com.tomyedwab.yellowstone.services.connection.DataViewResult
 import com.tomyedwab.yellowstone.ui.history.TaskHistoryActivity
+import com.google.gson.reflect.TypeToken
 
 class TaskListPageActivity : AppCompatActivity() {
 
@@ -45,6 +49,8 @@ class TaskListPageActivity : AppCompatActivity() {
     private var listId: Int = -1
     private var listTitle: String = ""
     private var isSelectionMode = false
+
+    private var availableTaskLists: List<TaskList> = emptyList()
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -184,6 +190,8 @@ class TaskListPageActivity : AppCompatActivity() {
                 errorText.visibility = View.GONE
             }
         }
+
+        loadAvailableTaskLists()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -358,13 +366,52 @@ class TaskListPageActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun loadAvailableTaskLists() {
+        val connectionService = this.connectionService ?: return
+
+        val taskListDataView = connectionService.getDataViewService().createDataView<TaskListResponse>(
+            connectionState = connectionService.getConnectionStateProvider().connectionState,
+            componentName = "yellowstone",
+            apiPath = "api/tasklist/all",
+            apiParams = emptyMap(),
+            typeToken = object : TypeToken<TaskListResponse>() {}
+        )
+
+        taskListDataView.observe(this) { result ->
+            if (result.data != null) {
+                availableTaskLists = result.data.taskLists.filter { it.id != listId }
+            }
+        }
+    }
+
     private fun showTargetListDialog(operation: TaskListPageViewModel.BatchOperation) {
-        // TODO: Load available task lists and show selection dialog
-        // For now, show a placeholder
+        if (availableTaskLists.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("No Available Lists")
+                .setMessage("There are no other lists available to ${getOperationName(operation)} tasks to.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val listTitles = availableTaskLists.map { it.title }.toTypedArray()
+
         AlertDialog.Builder(this)
             .setTitle("Select Target List")
-            .setMessage("Target list selection not implemented yet")
-            .setPositiveButton("OK", null)
+            .setItems(listTitles) { _, which ->
+                val targetList = availableTaskLists[which]
+                viewModel.performBatchOperation(operation, targetList.id)
+                exitSelectionMode()
+            }
+            .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun getOperationName(operation: TaskListPageViewModel.BatchOperation): String {
+        return when (operation) {
+            TaskListPageViewModel.BatchOperation.ADD_TO_LIST -> "add"
+            TaskListPageViewModel.BatchOperation.COPY -> "copy"
+            TaskListPageViewModel.BatchOperation.MOVE -> "move"
+        }
     }
 }
