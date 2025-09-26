@@ -6,16 +6,16 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
-import com.tomyedwab.yellowstone.models.TaskHistoryEntry
+import com.tomyedwab.yellowstone.generated.TaskHistory
 import java.text.SimpleDateFormat
 import java.util.*
 
 class TaskHistoryAdapter : RecyclerView.Adapter<TaskHistoryAdapter.HistoryViewHolder>() {
 
-    private var historyEntries: List<TaskHistoryEntry> = emptyList()
+    private var historyEntries: List<TaskHistory> = emptyList()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
-    fun updateHistory(entries: List<TaskHistoryEntry>) {
+    fun updateHistory(entries: List<TaskHistory>) {
         historyEntries = entries.reversed() // Reverse chronological order
         notifyDataSetChanged()
     }
@@ -37,7 +37,7 @@ class TaskHistoryAdapter : RecyclerView.Adapter<TaskHistoryAdapter.HistoryViewHo
         private val systemCommentText: TextView = itemView.findViewById(R.id.tv_system_comment)
         private val userCommentText: TextView = itemView.findViewById(R.id.tv_user_comment)
 
-        fun bind(entry: TaskHistoryEntry) {
+        fun bind(entry: TaskHistory) {
             // Format and display timestamp
             try {
                 val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())

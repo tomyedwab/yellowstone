@@ -152,7 +152,7 @@ class TaskHistoryActivity : AppCompatActivity() {
                     errorText.visibility = View.GONE
                     recyclerView.visibility = View.VISIBLE
 
-                    supportActionBar?.title = result.data.taskTitle
+                    supportActionBar?.title = result.data.title
                     adapter.updateHistory(result.data.history)
                 }
             }

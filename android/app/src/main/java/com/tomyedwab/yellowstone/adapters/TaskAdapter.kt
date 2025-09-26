@@ -7,7 +7,7 @@ import android.widget.CheckBox
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
-import com.tomyedwab.yellowstone.models.Task
+import com.tomyedwab.yellowstone.generated.Task
 import java.util.Collections
 
 class TaskAdapter(

@@ -38,6 +38,66 @@ android {
     }
 }
 
+// Task to generate Kotlin models from YAML schema
+tasks.register("generateKotlinModels") {
+    val rootDir = project.rootDir.parentFile
+    val schemaFile = File(rootDir, "backend/tasks/schema/types.yml")
+    val outputFile = File(project.projectDir, "src/main/java/com/tomyedwab/yellowstone/generated/Types.kt")
+    val generatorScript = File(rootDir, "scripts/generate-kotlin-models.sh")
+
+    inputs.file(schemaFile)
+    inputs.file(File(rootDir, "scripts/generate-kotlin-models.go"))
+    inputs.file(File(rootDir, "scripts/go.mod"))
+    outputs.file(outputFile)
+
+    doLast {
+        exec {
+            workingDir = rootDir
+            commandLine("bash", generatorScript.absolutePath, schemaFile.absolutePath, outputFile.absolutePath)
+        }
+    }
+}
+
+// Task to generate Kotlin events from YAML schema
+tasks.register("generateKotlinEvents") {
+    val rootDir = project.rootDir.parentFile
+    val schemaFile = File(rootDir, "backend/tasks/schema/events.yml")
+    val outputFile = File(project.projectDir, "src/main/java/com/tomyedwab/yellowstone/generated/Events.kt")
+    val generatorScript = File(rootDir, "scripts/generate-kotlin-models.sh")
+
+    inputs.file(schemaFile)
+    inputs.file(File(rootDir, "scripts/generate-kotlin-models.go"))
+    inputs.file(File(rootDir, "scripts/go.mod"))
+    outputs.file(outputFile)
+
+    doLast {
+        exec {
+            workingDir = rootDir
+            commandLine("bash", generatorScript.absolutePath, schemaFile.absolutePath, outputFile.absolutePath)
+        }
+    }
+}
+
+// Task to generate Kotlin routes from YAML schema
+tasks.register("generateKotlinRoutes") {
+    val rootDir = project.rootDir.parentFile
+    val schemaFile = File(rootDir, "backend/tasks/schema/api.yml")
+    val outputFile = File(project.projectDir, "src/main/java/com/tomyedwab/yellowstone/generated/ApiRoutes.kt")
+    val generatorScript = File(rootDir, "scripts/generate-kotlin-models.sh")
+
+    inputs.file(schemaFile)
+    inputs.file(File(rootDir, "scripts/generate-kotlin-models.go"))
+    inputs.file(File(rootDir, "scripts/go.mod"))
+    outputs.file(outputFile)
+
+    doLast {
+        exec {
+            workingDir = rootDir
+            commandLine("bash", generatorScript.absolutePath, schemaFile.absolutePath, outputFile.absolutePath)
+        }
+    }
+}
+
 // Task to build Go binary and copy to assets
 tasks.register("buildGoBinary") {
     doLast {
@@ -65,6 +125,11 @@ tasks.register("buildGoBinary") {
 
 // Hook into the Android build process
 afterEvaluate {
+    // Generate models, events, and routes before compilation
+    tasks.matching { it.name.startsWith("compile") && it.name.contains("Kotlin") }.configureEach {
+        dependsOn("generateKotlinModels", "generateKotlinEvents", "generateKotlinRoutes")
+    }
+
     tasks.matching { it.name.startsWith("generate") && it.name.contains("Assets") }.configureEach {
         dependsOn("buildGoBinary")
     }

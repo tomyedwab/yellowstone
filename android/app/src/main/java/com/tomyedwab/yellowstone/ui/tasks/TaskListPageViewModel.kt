@@ -5,27 +5,22 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.map
-import com.google.gson.reflect.TypeToken
-import com.tomyedwab.yellowstone.models.Task
-import com.tomyedwab.yellowstone.models.TaskComment
-import com.tomyedwab.yellowstone.models.TaskLabel
-import com.tomyedwab.yellowstone.models.TaskResponse
-import com.tomyedwab.yellowstone.models.TaskCommentsResponse
-import com.tomyedwab.yellowstone.models.TaskLabelsResponse
-import com.tomyedwab.yellowstone.provider.connection.ConnectionAction
+import com.tomyedwab.yellowstone.generated.ApiRoutes
+import com.tomyedwab.yellowstone.generated.Events
+import com.tomyedwab.yellowstone.generated.Task
+import com.tomyedwab.yellowstone.generated.TaskRecentComment
+import com.tomyedwab.yellowstone.generated.TaskLabels
 import com.tomyedwab.yellowstone.provider.connection.ConnectionStateProvider
-import com.tomyedwab.yellowstone.provider.connection.PendingEvent
 import com.tomyedwab.yellowstone.provider.connection.HubConnectionState
 import com.tomyedwab.yellowstone.services.connection.DataViewService
-import com.tomyedwab.yellowstone.services.connection.DataViewResult
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.*
 
 class TaskListPageViewModel(
-    private val dataViewService: DataViewService,
-    private val connectionState: LiveData<HubConnectionState>,
-    private val connectionStateProvider: ConnectionStateProvider,
+    dataViewService: DataViewService,
+    connectionState: LiveData<HubConnectionState>,
+    connectionStateProvider: ConnectionStateProvider,
     private val listId: Int
 ) : ViewModel() {
 
@@ -33,40 +28,20 @@ class TaskListPageViewModel(
         ADD_TO_LIST, COPY, MOVE
     }
 
-    private val tasksDataView: LiveData<DataViewResult<TaskResponse>> =
-        dataViewService.createDataView(
-            connectionState = connectionState,
-            componentName = "yellowstone",
-            apiPath = "api/task/list",
-            apiParams = mapOf("listId" to listId.toString()),
-            typeToken = object : TypeToken<TaskResponse>() {}
-        )
+    private val apiRoutes = ApiRoutes(dataViewService, connectionState)
+    private val events = Events(connectionStateProvider)
 
-    private val commentsDataView: LiveData<DataViewResult<TaskCommentsResponse>> =
-        dataViewService.createDataView(
-            connectionState = connectionState,
-            componentName = "yellowstone",
-            apiPath = "api/tasklist/recentcomments",
-            apiParams = mapOf("listId" to listId.toString()),
-            typeToken = object : TypeToken<TaskCommentsResponse>() {}
-        )
-
-    private val labelsDataView: LiveData<DataViewResult<TaskLabelsResponse>> =
-        dataViewService.createDataView(
-            connectionState = connectionState,
-            componentName = "yellowstone",
-            apiPath = "api/task/labels",
-            apiParams = mapOf("listId" to listId.toString()),
-            typeToken = object : TypeToken<TaskLabelsResponse>() {}
-        )
+    private val tasksDataView = apiRoutes.getTaskList(listId)
+    private val commentsDataView = apiRoutes.getTasklistRecentComments(listId)
+    private val labelsDataView = apiRoutes.getTasklistLabels(listId)
 
     val tasks: LiveData<List<Task>> =
         tasksDataView.map { result -> result.data?.tasks ?: emptyList() }
 
-    val recentComments: LiveData<List<TaskComment>> =
+    val recentComments: LiveData<List<TaskRecentComment>> =
         commentsDataView.map { result -> result.data?.comments ?: emptyList() }
 
-    val labels: LiveData<List<TaskLabel>> =
+    val labels: LiveData<List<TaskLabels>> =
         labelsDataView.map { result -> result.data?.labels ?: emptyList() }
 
     private val _selectedTasks = MutableLiveData<Set<Int>>()
@@ -83,16 +58,7 @@ class TaskListPageViewModel(
     fun addTask(title: String) {
         viewModelScope.launch {
             try {
-                val event = PendingEvent(
-                    clientId = UUID.randomUUID().toString(),
-                    type = "Task:Add",
-                    timestamp = Instant.now().toString(),
-                    data = mapOf(
-                        "listId" to listId,
-                        "title" to title
-                    )
-                )
-                connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                events.taskAdd(null, listId, title)
             } catch (e: Exception) {
                 // Error handling would be managed by the data views
             }
@@ -103,21 +69,12 @@ class TaskListPageViewModel(
         viewModelScope.launch {
             try {
                 val task = tasks.value?.find { it.id == taskId } ?: return@launch
-                val completionTime: Any? = if (task.completedAt != null) {
+                val completionTime = if (task.completedAt != null) {
                     null
                 } else {
-                    Instant.now().toString()
+                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date())
                 }
-                val event = PendingEvent(
-                    clientId = UUID.randomUUID().toString(),
-                    type = "Task:UpdateCompleted",
-                    timestamp = Instant.now().toString(),
-                    data = mapOf(
-                        "taskId" to taskId,
-                        "completedAt" to completionTime,
-                    )
-                )
-                connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                events.taskUpdateCompleted(completionTime, taskId)
             } catch (e: Exception) {
                 // Error handling would be managed by the data views
             }
@@ -133,16 +90,7 @@ class TaskListPageViewModel(
 
         viewModelScope.launch {
             try {
-                val event = PendingEvent(
-                    clientId = UUID.randomUUID().toString(),
-                    type = "TaskList:ReorderTasks",
-                    timestamp = Instant.now().toString(),
-                    data = mapOf(
-                        "taskId" to task.id,
-                        "afterTaskId" to (afterTask?.id ?: null)
-                    )
-                )
-                connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                events.taskListReorderTasks(afterTask?.id, task.id, listId)
             } catch (e: Exception) {
                 // Error handling would be managed by the data views
             }
@@ -152,16 +100,7 @@ class TaskListPageViewModel(
     fun renameList(newTitle: String) {
         viewModelScope.launch {
             try {
-                val event = PendingEvent(
-                    clientId = UUID.randomUUID().toString(),
-                    type = "TaskList:UpdateTitle",
-                    timestamp = Instant.now().toString(),
-                    data = mapOf(
-                        "listId" to listId,
-                        "title" to newTitle
-                    )
-                )
-                connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                events.taskListUpdateTitle(listId, newTitle)
             } catch (e: Exception) {
                 // Error handling would be managed by the data views
             }
@@ -171,16 +110,7 @@ class TaskListPageViewModel(
     fun archiveList() {
         viewModelScope.launch {
             try {
-                val event = PendingEvent(
-                    clientId = UUID.randomUUID().toString(),
-                    type = "TaskList:UpdateArchived",
-                    timestamp = Instant.now().toString(),
-                    data = mapOf(
-                        "listId" to listId,
-                        "archived" to true
-                    )
-                )
-                connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                events.taskListUpdateArchived(true, listId)
             } catch (e: Exception) {
                 // Error handling would be managed by the data views
             }
@@ -231,45 +161,17 @@ class TaskListPageViewModel(
                 when (operation) {
                     BatchOperation.MOVE -> {
                         if (targetListId != null) {
-                            val event = PendingEvent(
-                                clientId = UUID.randomUUID().toString(),
-                                type = "TaskList:MoveTasks",
-                                timestamp = Instant.now().toString(),
-                                data = mapOf(
-                                    "taskIds" to selectedTaskIds,
-                                    "oldListId" to listId,
-                                    "newListId" to targetListId
-                                )
-                            )
-                            connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                            events.taskListMoveTasks(targetListId, listId, selectedTaskIds)
                         }
                     }
                     BatchOperation.ADD_TO_LIST -> {
                         if (targetListId != null) {
-                            val event = PendingEvent(
-                                clientId = UUID.randomUUID().toString(),
-                                type = "TaskList:CopyTasks",
-                                timestamp = Instant.now().toString(),
-                                data = mapOf(
-                                    "taskIds" to selectedTaskIds,
-                                    "newListId" to targetListId
-                                )
-                            )
-                            connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                            events.taskListCopyTasks(targetListId, selectedTaskIds)
                         }
                     }
                     BatchOperation.COPY -> {
                         if (targetListId != null) {
-                            val event = PendingEvent(
-                                clientId = UUID.randomUUID().toString(),
-                                type = "TaskList:DuplicateTasks",
-                                timestamp = Instant.now().toString(),
-                                data = mapOf(
-                                    "taskIds" to selectedTaskIds,
-                                    "newListId" to targetListId
-                                )
-                            )
-                            connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+                            events.taskListDuplicateTasks(targetListId, selectedTaskIds)
                         }
                     }
                 }

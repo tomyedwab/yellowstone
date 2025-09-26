@@ -25,7 +25,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.TaskListAdapter
 import com.tomyedwab.yellowstone.adapters.TaskListItemTouchHelper
-import com.tomyedwab.yellowstone.models.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
 import com.tomyedwab.yellowstone.MainActivity
 

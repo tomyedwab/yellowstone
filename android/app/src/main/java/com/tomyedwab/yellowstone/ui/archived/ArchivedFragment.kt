@@ -15,7 +15,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.ArchivedTaskListAdapter
-import com.tomyedwab.yellowstone.models.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
 import com.tomyedwab.yellowstone.MainActivity
 

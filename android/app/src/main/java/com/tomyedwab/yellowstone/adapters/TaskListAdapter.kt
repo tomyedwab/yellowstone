@@ -7,7 +7,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
-import com.tomyedwab.yellowstone.models.TaskList
+import com.tomyedwab.yellowstone.generated.TaskList
 import java.util.Collections
 
 class TaskListAdapter : RecyclerView.Adapter<TaskListAdapter.TaskListViewHolder> {

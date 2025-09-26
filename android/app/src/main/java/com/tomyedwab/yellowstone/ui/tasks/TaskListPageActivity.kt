@@ -22,13 +22,10 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.TaskAdapter
 import com.tomyedwab.yellowstone.adapters.TaskItemTouchHelper
-import com.tomyedwab.yellowstone.models.Task
-import com.tomyedwab.yellowstone.models.TaskList
-import com.tomyedwab.yellowstone.models.TaskListResponse
+import com.tomyedwab.yellowstone.generated.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
-import com.tomyedwab.yellowstone.services.connection.DataViewResult
 import com.tomyedwab.yellowstone.ui.history.TaskHistoryActivity
-import com.google.gson.reflect.TypeToken
+import com.tomyedwab.yellowstone.generated.ApiRoutes
 
 class TaskListPageActivity : AppCompatActivity() {
 
@@ -368,14 +365,8 @@ class TaskListPageActivity : AppCompatActivity() {
 
     private fun loadAvailableTaskLists() {
         val connectionService = this.connectionService ?: return
-
-        val taskListDataView = connectionService.getDataViewService().createDataView<TaskListResponse>(
-            connectionState = connectionService.getConnectionStateProvider().connectionState,
-            componentName = "yellowstone",
-            apiPath = "api/tasklist/all",
-            apiParams = emptyMap(),
-            typeToken = object : TypeToken<TaskListResponse>() {}
-        )
+        val apiRoutes = ApiRoutes(connectionService.getDataViewService(), connectionService.getConnectionStateProvider().connectionState)
+        val taskListDataView = apiRoutes.getTasklistAll()
 
         taskListDataView.observe(this) { result ->
             if (result.data != null) {
