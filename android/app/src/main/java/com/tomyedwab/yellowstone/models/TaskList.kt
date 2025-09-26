@@ -13,8 +13,8 @@ data class TaskListResponse(@SerializedName("TaskLists") val taskLists: List<Tas
 
 data class TaskMetadata(
         @SerializedName("ListId") val listId: Int,
-        @SerializedName("TotalTasks") val totalTasks: Int,
-        @SerializedName("CompletedTasks") val completedTasks: Int
+        @SerializedName("Total") val totalTasks: Int,
+        @SerializedName("Completed") val completedTasks: Int
 )
 
 data class TaskMetadataResponse(@SerializedName("Metadata") val metadata: List<TaskMetadata>)

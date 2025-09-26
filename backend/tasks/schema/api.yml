@@ -1,0 +1,92 @@
+routes:
+  # Task API endpoints
+  - route: "/api/task/list"
+    description: "Get all tasks for a specific task list"
+    method: GET
+    parameters:
+      - name: listId
+        type: integer
+        required: true
+        description: "ID of the task list to retrieve tasks from"
+    returns: TaskResponse
+
+  - route: "/api/task/get"
+    description: "Get a specific task by ID"
+    method: GET
+    parameters:
+      - name: id
+        type: integer
+        required: true
+        description: "ID of the task to retrieve"
+    returns: Task
+
+  - route: "/api/task/history"
+    description: "Get the history of changes for a specific task"
+    method: GET
+    parameters:
+      - name: id
+        type: integer
+        required: true
+        description: "ID of the task to retrieve history for"
+    returns: TaskHistoryResponse
+
+  # Task List API endpoints
+  - route: "/api/tasklist/get"
+    description: "Get a specific task list by ID"
+    method: GET
+    parameters:
+      - name: id
+        type: integer
+        required: true
+        description: "ID of the task list to retrieve"
+    returns: TaskList
+
+  - route: "/api/tasklist/all"
+    description: "Get all task lists"
+    method: GET
+    parameters: []
+    returns: TaskListResponse
+
+  - route: "/api/tasklist/todo"
+    description: "Get all task lists in the 'toDoList' category"
+    method: GET
+    parameters: []
+    returns: TaskListResponse
+
+  - route: "/api/tasklist/template"
+    description: "Get all task lists in the 'template' category"
+    method: GET
+    parameters: []
+    returns: TaskListResponse
+
+  - route: "/api/tasklist/archived"
+    description: "Get all archived task lists"
+    method: GET
+    parameters: []
+    returns: TaskListResponse
+
+  - route: "/api/tasklist/metadata"
+    description: "Get metadata (total and completed task counts) for all task lists"
+    method: GET
+    parameters: []
+    returns: TaskListMetadataResponse
+
+  - route: "/api/tasklist/recent_comments"
+    description: "Get recent comments for tasks in a specific task list"
+    method: GET
+    parameters:
+      - name: listId
+        type: integer
+        required: true
+        description: "ID of the task list to retrieve recent comments from"
+    returns: TaskRecentCommentResponse
+
+  - route: "/api/tasklist/labels"
+    description: "Get all task labels for tasks in a specific task list"
+    method: GET
+    parameters:
+      - name: listId
+        type: integer
+        required: true
+        description: "ID of the task list to retrieve task labels from"
+    returns: TaskLabelsResponse

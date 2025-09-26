@@ -2,14 +2,10 @@ package state
 
 import (
 	"fmt"
-	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-
-	"github.com/tomyedwab/yesterday/applib/database"
-	"github.com/tomyedwab/yesterday/applib/httputils"
+	"tomyedwab.com/yellowstone-server/tasks/generated"
 )
 
 // Table schema
@@ -23,82 +19,43 @@ CREATE TABLE IF NOT EXISTS task_v1 (
 );
 `
 
-// Events
-
-const AddTaskEventType = "Task:Add"
-const UpdateTaskTitleEventType = "Task:UpdateTitle"
-const UpdateTaskCompletedEventType = "Task:UpdateCompleted"
-const UpdateTaskDueDateEventType = "Task:UpdateDueDate"
-const DeleteTaskEventType = "Task:Delete"
-
-type AddTaskEvent struct {
-	Title      string     `db:"title"`
-	DueDate    *time.Time `db:"due_date"`
-	TaskListId int        `db:"task_list_id"`
-}
-
-type UpdateTaskTitleEvent struct {
-	TaskId int    `db:"task_id"`
-	Title  string `db:"title"`
-}
-
-type UpdateTaskCompletedEvent struct {
-	TaskId      int        `db:"task_id"`
-	CompletedAt *time.Time `db:"completed_at"`
-}
-
-type UpdateTaskDueDateEvent struct {
-	TaskId  int        `db:"task_id"`
-	DueDate *time.Time `db:"due_date"`
-}
-
-type DeleteTaskEvent struct {
-	TaskId int `db:"task_id"`
+func InitTask(tx *sqlx.Tx) error {
+	fmt.Printf("Initializing Task v1\n")
+	_, err := tx.Exec(taskSchema)
+	return err
 }
 
 // Event handler
 
 const insertTaskV1Sql = `
 INSERT INTO task_v1 (title, due_date)
-VALUES (:title, :due_date);
+VALUES (:title, :duedate);
 `
 
 const updateTaskTitleV1Sql = `
 UPDATE task_v1
 SET title = :title
-WHERE id = :task_id;
+WHERE id = :taskid;
 `
 
 const updateTaskCompletedV1Sql = `
 UPDATE task_v1
-SET completed_at = :completed_at
-WHERE id = :task_id;
+SET completed_at = :completedat
+WHERE id = :taskid;
 `
 
 const updateTaskDueDateV1Sql = `
 UPDATE task_v1
-SET due_date = :due_date
-WHERE id = :task_id;
+SET due_date = :duedate
+WHERE id = :taskid;
 `
 
 const deleteTaskV1Sql = `
 DELETE FROM task_v1
-WHERE id = :task_id;
+WHERE id = :taskid;
 `
 
-func InitTask(db *database.Database, tx *sqlx.Tx) error {
-	database.AddEventHandler(db, AddTaskEventType, handleAddTaskEvent)
-	database.AddEventHandler(db, UpdateTaskTitleEventType, handleUpdateTaskTitleEvent)
-	database.AddEventHandler(db, UpdateTaskCompletedEventType, handleUpdateTaskCompletedEvent)
-	database.AddEventHandler(db, UpdateTaskDueDateEventType, handleUpdateTaskDueDateEvent)
-	database.AddEventHandler(db, DeleteTaskEventType, handleDeleteTaskEvent)
-	InitTaskHandlers(db)
-	fmt.Printf("Initializing Task v1\n")
-	_, err := tx.Exec(taskSchema)
-	return err
-}
-
-func handleAddTaskEvent(tx *sqlx.Tx, event *AddTaskEvent) (bool, error) {
+func (h *StateEventHandler) HandleTaskAddEvent(tx *sqlx.Tx, event *generated.TaskAddEvent) (bool, error) {
 	fmt.Printf("Task v1: AddTaskEvent %v for list %d\n", event.Title, event.TaskListId)
 	result, err := tx.NamedExec(
 		insertTaskV1Sql,
@@ -115,7 +72,7 @@ func handleAddTaskEvent(tx *sqlx.Tx, event *AddTaskEvent) (bool, error) {
 	}
 
 	// Add the task to the list
-	addToList := AddTaskToListEvent{
+	addToList := generated.TaskListAddTaskEvent{
 		TaskId: int(taskId),
 		ListId: event.TaskListId,
 	}
@@ -123,46 +80,98 @@ func handleAddTaskEvent(tx *sqlx.Tx, event *AddTaskEvent) (bool, error) {
 	return true, err
 }
 
-func handleUpdateTaskTitleEvent(tx *sqlx.Tx, event *UpdateTaskTitleEvent) (bool, error) {
+func (h *StateEventHandler) HandleTaskUpdateTitleEvent(tx *sqlx.Tx, event *generated.TaskUpdateTitleEvent) (bool, error) {
 	fmt.Printf("Task v1: UpdateTaskTitleEvent %d %v\n", event.TaskId, event.Title)
 	_, err := tx.NamedExec(
 		updateTaskTitleV1Sql,
 		*event,
 	)
+	if err != nil {
+		return true, err
+	}
+	historyEvent := AddTaskHistoryEvent{
+		TaskId:        event.TaskId,
+		UpdateType:    "update_title",
+		SystemComment: fmt.Sprintf("Title updated to: %s", event.Title),
+	}
+	_, err = tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
 	return true, err
 }
 
-func handleUpdateTaskCompletedEvent(tx *sqlx.Tx, event *UpdateTaskCompletedEvent) (bool, error) {
+func (h *StateEventHandler) HandleTaskUpdateCompletedEvent(tx *sqlx.Tx, event *generated.TaskUpdateCompletedEvent) (bool, error) {
 	fmt.Printf("Task v1: UpdateTaskCompletedEvent %d %v\n", event.TaskId, event.CompletedAt)
 	_, err := tx.NamedExec(
 		updateTaskCompletedV1Sql,
 		*event,
 	)
+	if err != nil {
+		return true, err
+	}
+	var comment string
+	if event.CompletedAt != nil {
+		comment = fmt.Sprintf("Task marked as completed at %s", event.CompletedAt.Format(time.RFC3339))
+	} else {
+		comment = "Task marked as not completed"
+	}
+	historyEvent := AddTaskHistoryEvent{
+		TaskId:        event.TaskId,
+		UpdateType:    "update_completed",
+		SystemComment: comment,
+	}
+	_, err = tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
 	return true, err
 }
 
-func handleUpdateTaskDueDateEvent(tx *sqlx.Tx, event *UpdateTaskDueDateEvent) (bool, error) {
+func (h *StateEventHandler) HandleTaskUpdateDueDateEvent(tx *sqlx.Tx, event *generated.TaskUpdateDueDateEvent) (bool, error) {
 	fmt.Printf("Task v1: UpdateTaskDueDateEvent %d %v\n", event.TaskId, event.DueDate)
 	_, err := tx.NamedExec(
 		updateTaskDueDateV1Sql,
 		*event,
 	)
+	if err != nil {
+		return true, err
+	}
+	var comment string
+	if event.DueDate != nil {
+		comment = fmt.Sprintf("Due date set to %s", event.DueDate.Format(time.RFC3339))
+	} else {
+		comment = "Due date removed"
+	}
+	historyEvent := AddTaskHistoryEvent{
+		TaskId:        event.TaskId,
+		UpdateType:    "update_due_date",
+		SystemComment: comment,
+	}
+	_, err = tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
 	return true, err
 }
 
-func handleDeleteTaskEvent(tx *sqlx.Tx, event *DeleteTaskEvent) (bool, error) {
+func (h *StateEventHandler) HandleTaskDeleteEvent(tx *sqlx.Tx, event *generated.TaskDeleteEvent) (bool, error) {
 	fmt.Printf("Task v1: DeleteTaskEvent %d\n", event.TaskId)
 	_, err := tx.NamedExec(
 		deleteTaskV1Sql,
 		*event,
 	)
+	if err != nil {
+		return true, err
+	}
+	_, err = tx.NamedExec(deleteTaskToListV1Sql, event)
+	if err != nil {
+		return true, err
+	}
+	historyEvent := AddTaskHistoryEvent{
+		TaskId:        event.TaskId,
+		UpdateType:    "delete",
+		SystemComment: "Task deleted",
+	}
+	_, err = tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
 	return true, err
 }
 
 // State queries
 
 const getTaskByIdV1Sql = `
-SELECT id, title, due_date, completed_at
+SELECT id, title, due_date AS duedate, completed_at AS completedat
 FROM task_v1 WHERE id = $1;
 `
 
@@ -172,73 +181,8 @@ FROM task_v1
 WHERE id = $1;
 `
 
-type TaskV1 struct {
-	Id          int
-	Title       string
-	DueDate     *time.Time `db:"due_date"`
-	CompletedAt *time.Time `db:"completed_at"`
-}
-
-type TaskV1Response struct {
-	Tasks []TaskV1
-}
-
-func taskDBById(db *sqlx.DB, id int) (TaskV1, error) {
-	var task TaskV1
+func (r *StateResolver) GetApiTaskGet(db *sqlx.DB, id int) (generated.Task, error) {
+	var task generated.Task
 	err := db.Get(&task, getTaskByIdV1Sql, id)
 	return task, err
-}
-
-func InitTaskHandlers(db *database.Database) {
-	http.HandleFunc("/api/task/list", func(w http.ResponseWriter, r *http.Request) {
-		listIdStr := r.URL.Query().Get("listId")
-		if listIdStr == "" {
-			http.Error(w, "Missing listId parameter", http.StatusBadRequest)
-			return
-		}
-
-		listId, err := strconv.Atoi(listIdStr)
-		if err != nil {
-			http.Error(w, "Invalid listId parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskDBForList(db.GetDB(), listId)
-		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
-	})
-
-	http.HandleFunc("/api/task/get", func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.URL.Query().Get("id")
-		if idStr == "" {
-			http.Error(w, "Missing id parameter", http.StatusBadRequest)
-			return
-		}
-
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskDBById(db.GetDB(), id)
-		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
-	})
-
-	http.HandleFunc("/api/task/history", func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.URL.Query().Get("id")
-		if idStr == "" {
-			http.Error(w, "Missing id parameter", http.StatusBadRequest)
-			return
-		}
-
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			http.Error(w, "Invalid id parameter", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := taskHistoryDBForTask(db.GetDB(), id)
-
-		httputils.HandleAPIResponse(w, r, resp, err, http.StatusInternalServerError)
-	})
 }

@@ -6,6 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/tomyedwab/yesterday/applib"
+	"tomyedwab.com/yellowstone-server/tasks/generated"
 	"tomyedwab.com/yellowstone-server/tasks/state"
 )
 
@@ -22,21 +23,23 @@ func initApplication(application *applib.Application) error {
 
 	tx := db.GetDB().MustBegin()
 	defer tx.Rollback()
-	if err = state.InitTask(db, tx); err != nil {
+	if err = state.InitTask(tx); err != nil {
 		return err
 	}
-	if err = state.InitTaskList(db, tx); err != nil {
+	if err = state.InitTaskList(tx); err != nil {
 		return err
 	}
-	if err = state.InitTaskHistory(db, tx); err != nil {
+	if err = state.InitTaskHistory(tx); err != nil {
 		return err
 	}
-	if err = state.InitTaskToList(db, tx); err != nil {
+	if err = state.InitTaskToList(tx); err != nil {
 		return err
 	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+
+	generated.InitHandlers(db, state.NewResolver(), state.NewEventHandler())
 	return nil
 }
 

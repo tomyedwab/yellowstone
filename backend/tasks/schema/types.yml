@@ -1,0 +1,160 @@
+types:
+  # Core Task Type
+  Task:
+    description: "Represents a single task in the system"
+    properties:
+      Id:
+        type: integer
+        description: "Unique identifier for the task"
+      Title:
+        type: string
+        description: "Title/name of the task"
+      DueDate:
+        type: timestamp
+        nullable: true
+        description: "Optional due date for the task"
+      CompletedAt:
+        type: timestamp
+        nullable: true
+        description: "Timestamp when the task was completed, null if not completed"
+
+  # Task Response Types
+  TaskResponse:
+    description: "Response containing a list of tasks"
+    properties:
+      Tasks:
+        type: array
+        itemType: Task
+        description: "Array of tasks"
+
+  # Task History Types
+  TaskHistory:
+    description: "Represents a single history entry for a task"
+    properties:
+      Id:
+        type: integer
+        description: "Unique identifier for the history entry"
+      TaskId:
+        type: integer
+        description: "ID of the task this history entry belongs to"
+      UpdateType:
+        type: string
+        description: "Type of update (update_title, update_completed, update_due_date, delete, add_comment)"
+      SystemComment:
+        type: string
+        description: "System-generated comment describing the change"
+      UserComment:
+        type: string
+        nullable: true
+        description: "Optional user-provided comment"
+      CreatedAt:
+        type: timestamp
+        description: "When this history entry was created"
+
+  TaskHistoryResponse:
+    description: "Response containing task history and title"
+    properties:
+      History:
+        type: array
+        itemType: TaskHistory
+        description: "Array of history entries for the task"
+      Title:
+        type: string
+        description: "Current title of the task"
+
+  # Task List Types
+  TaskList:
+    description: "Represents a task list in the system"
+    properties:
+      Id:
+        type: integer
+        description: "Unique identifier for the task list"
+      Title:
+        type: string
+        description: "Title/name of the task list"
+      Category:
+        type: string
+        description: "Category of the list (toDoList, template, label, etc.)"
+      Archived:
+        type: boolean
+        description: "Whether the task list is archived"
+
+  TaskListResponse:
+    description: "Response containing a list of task lists"
+    properties:
+      TaskLists:
+        type: array
+        itemType: TaskList
+        description: "Array of task lists"
+
+  # Task List Metadata Types
+  TaskListMetadata:
+    description: "Metadata information for a task list"
+    properties:
+      ListId:
+        type: integer
+        description: "ID of the task list"
+      Total:
+        type: integer
+        description: "Total number of tasks in the list"
+      Completed:
+        type: integer
+        description: "Number of completed tasks in the list"
+
+  TaskListMetadataResponse:
+    description: "Response containing task list metadata"
+    properties:
+      Metadata:
+        type: array
+        itemType: TaskListMetadata
+        description: "Array of metadata entries for task lists"
+
+  # Task Comments Types
+  TaskRecentComment:
+    description: "Recent comment information for a task"
+    properties:
+      ListId:
+        type: integer
+        description: "ID of the task list containing the task"
+      TaskId:
+        type: integer
+        description: "ID of the task with the comment"
+      UserComment:
+        type: string
+        nullable: true
+        description: "The user comment, null if no comment"
+      CreatedAt:
+        type: timestamp
+        nullable: true
+        description: "When the comment was created, null if no comment"
+
+  TaskRecentCommentResponse:
+    description: "Response containing recent comments for tasks in a list"
+    properties:
+      Comments:
+        type: array
+        itemType: TaskRecentComment
+        description: "Array of recent comment entries"
+
+  # Task Labels Types
+  TaskLabels:
+    description: "Label information for a task"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task with the label"
+      Label:
+        type: string
+        description: "The label text"
+      ListId:
+        type: integer
+        description: "ID of the list representing this label"
+
+  TaskLabelsResponse:
+    description: "Response containing task labels for tasks in a list"
+    properties:
+      Labels:
+        type: array
+        itemType: TaskLabels
+        description: "Array of task label entries"
+

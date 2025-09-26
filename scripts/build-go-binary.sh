@@ -38,7 +38,14 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/pkg/bin"
 
 # Build the Go
+UTIL_DIR="$(dirname "$0")/../util"
 BACKEND_DIR="$(dirname "$0")/../backend"
+mkdir -p "$BACKEND_DIR/tasks/generated"
+(cd $UTIL_DIR &&
+  "$GO_BIN" run generate_types.go \
+    ../backend/tasks/schema/types.yml ../backend/tasks/schema/events.yml \
+    ../backend/tasks/schema/api.yml \
+    generated ../backend/tasks/generated/types.go)
 (cd $BACKEND_DIR &&
   "$GO_BIN" build -o "../build/pkg/bin/app" ./tasks/main.go &&
   cp -p tasks/manifest.json ../build/pkg/

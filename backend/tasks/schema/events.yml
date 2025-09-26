@@ -1,0 +1,167 @@
+events:
+  "Task:Add":
+    description: "Event to add a new task"
+    properties:
+      Title:
+        type: string
+        description: "Title of the new task"
+      DueDate:
+        type: timestamp
+        nullable: true
+        description: "Optional due date for the task"
+      TaskListId:
+        type: integer
+        description: "ID of the task list to add the task to"
+
+  "Task:UpdateTitle":
+    description: "Event to update a task's title"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task to update"
+      Title:
+        type: string
+        description: "New title for the task"
+
+  "Task:UpdateCompleted":
+    description: "Event to update a task's completion status"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task to update"
+      CompletedAt:
+        type: timestamp
+        nullable: true
+        description: "Completion timestamp, null to mark as not completed"
+
+  "Task:UpdateDueDate":
+    description: "Event to update a task's due date"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task to update"
+      DueDate:
+        type: timestamp
+        nullable: true
+        description: "New due date, null to remove due date"
+
+  "Task:Delete":
+    description: "Event to delete a task"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task to delete"
+
+  "Task:AddComment":
+    description: "Event to add a user comment to a task"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task to add comment to"
+      UserComment:
+        type: string
+        description: "The user comment to add"
+
+  "TaskList:Add":
+    description: "Event to add a new task list"
+    properties:
+      Title:
+        type: string
+        description: "Title of the new task list"
+      Category:
+        type: string
+        description: "Category of the task list (toDoList, template, label, etc.)"
+      Archived:
+        type: boolean
+        description: "Whether the task list should be archived"
+
+  "TaskList:UpdateTitle":
+    description: "Event to update a task list's title"
+    properties:
+      ListId:
+        type: integer
+        description: "ID of the task list to update"
+      Title:
+        type: string
+        description: "New title for the task list"
+
+  "TaskList:UpdateArchived":
+    description: "Event to update a task list's archived status"
+    properties:
+      ListId:
+        type: integer
+        description: "ID of the task list to update"
+      Archived:
+        type: boolean
+        description: "New archived status for the task list"
+
+  "TaskList:Reorder":
+    description: "Event to reorder a task list"
+    properties:
+      ListId:
+        type: integer
+        description: "ID of the task list to reorder"
+      AfterListId:
+        type: integer
+        nullable: true
+        description: "ID of the list to place this list after, null to move to front"
+
+  "TaskList:AddTask":
+    description: "Event to add a task to a task list"
+    properties:
+      TaskId:
+        type: integer
+        description: "ID of the task to add"
+      ListId:
+        type: integer
+        description: "ID of the list to add the task to"
+
+  "TaskList:MoveTasks":
+    description: "Event to move tasks from one list to another"
+    properties:
+      TaskIds:
+        type: array
+        itemType: integer
+        description: "Array of task IDs to move"
+      OldListId:
+        type: integer
+        description: "ID of the source list"
+      NewListId:
+        type: integer
+        description: "ID of the destination list"
+
+  "TaskList:CopyTasks":
+    description: "Event to copy tasks to another list"
+    properties:
+      TaskIds:
+        type: array
+        itemType: integer
+        description: "Array of task IDs to copy"
+      NewListId:
+        type: integer
+        description: "ID of the destination list"
+
+  "TaskList:ReorderTasks":
+    description: "Event to reorder tasks within a list"
+    properties:
+      TaskListId:
+        type: integer
+        description: "ID of the task list containing the tasks"
+      OldTaskId:
+        type: integer
+        description: "ID of the task to reorder"
+      AfterTaskId:
+        type: integer
+        nullable: true
+        description: "ID of the task to place this task after, null to move to front"
+
+  "TaskList:DuplicateTasks":
+    description: "Event to duplicate tasks to another list"
+    properties:
+      TaskIds:
+        type: array
+        itemType: integer
+        description: "Array of task IDs to duplicate"
+      NewListId:
+        type: integer
+        description: "ID of the destination list"

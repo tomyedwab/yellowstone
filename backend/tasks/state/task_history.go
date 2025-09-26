@@ -2,11 +2,9 @@ package state
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
-
-	"github.com/tomyedwab/yesterday/applib/database"
+	"tomyedwab.com/yellowstone-server/tasks/generated"
 )
 
 // Table schema
@@ -22,9 +20,13 @@ CREATE TABLE IF NOT EXISTS task_history_v1 (
 );
 `
 
-// Events
+func InitTaskHistory(tx *sqlx.Tx) error {
+	fmt.Printf("Initializing TaskHistory v1\n")
+	_, err := tx.Exec(taskHistorySchema)
+	return err
+}
 
-const AddTaskCommentEventType = "Task:AddComment"
+// Events
 
 type AddTaskHistoryEvent struct {
 	TaskId        int     `db:"task_id"`
@@ -33,82 +35,13 @@ type AddTaskHistoryEvent struct {
 	UserComment   *string `db:"user_comment"`
 }
 
-type AddTaskCommentEvent struct {
-	TaskId      int    `db:"task_id"`
-	UserComment string `db:"user_comment"`
-}
-
 // Event handler
 const insertTaskHistoryV1Sql = `
 INSERT INTO task_history_v1 (task_id, update_type, system_comment, user_comment)
 VALUES (:task_id, :update_type, :system_comment, :user_comment);
 `
 
-func InitTaskHistory(db *database.Database, tx *sqlx.Tx) error {
-	database.AddEventHandler(db, UpdateTaskTitleEventType, handleHistoryUpdateTaskTitleEvent)
-	database.AddEventHandler(db, UpdateTaskCompletedEventType, handleHistoryUpdateTaskCompletedEvent)
-	database.AddEventHandler(db, UpdateTaskDueDateEventType, handleHistoryUpdateTaskDueDateEvent)
-	database.AddEventHandler(db, DeleteTaskEventType, handleHistoryDeleteTaskEvent)
-	database.AddEventHandler(db, AddTaskCommentEventType, handleAddTaskCommentEvent)
-
-	fmt.Printf("Initializing TaskHistory v1\n")
-	_, err := tx.Exec(taskHistorySchema)
-	return err
-}
-
-func handleHistoryUpdateTaskTitleEvent(tx *sqlx.Tx, event *UpdateTaskTitleEvent) (bool, error) {
-	historyEvent := AddTaskHistoryEvent{
-		TaskId:        event.TaskId,
-		UpdateType:    "update_title",
-		SystemComment: fmt.Sprintf("Title updated to: %s", event.Title),
-	}
-	_, err := tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
-	return true, err
-}
-
-func handleHistoryUpdateTaskCompletedEvent(tx *sqlx.Tx, event *UpdateTaskCompletedEvent) (bool, error) {
-	var comment string
-	if event.CompletedAt != nil {
-		comment = fmt.Sprintf("Task marked as completed at %s", event.CompletedAt.Format(time.RFC3339))
-	} else {
-		comment = "Task marked as not completed"
-	}
-	historyEvent := AddTaskHistoryEvent{
-		TaskId:        event.TaskId,
-		UpdateType:    "update_completed",
-		SystemComment: comment,
-	}
-	_, err := tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
-	return true, err
-}
-
-func handleHistoryUpdateTaskDueDateEvent(tx *sqlx.Tx, event *UpdateTaskDueDateEvent) (bool, error) {
-	var comment string
-	if event.DueDate != nil {
-		comment = fmt.Sprintf("Due date set to %s", event.DueDate.Format(time.RFC3339))
-	} else {
-		comment = "Due date removed"
-	}
-	historyEvent := AddTaskHistoryEvent{
-		TaskId:        event.TaskId,
-		UpdateType:    "update_due_date",
-		SystemComment: comment,
-	}
-	_, err := tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
-	return true, err
-}
-
-func handleHistoryDeleteTaskEvent(tx *sqlx.Tx, event *DeleteTaskEvent) (bool, error) {
-	historyEvent := AddTaskHistoryEvent{
-		TaskId:        event.TaskId,
-		UpdateType:    "delete",
-		SystemComment: "Task deleted",
-	}
-	_, err := tx.NamedExec(insertTaskHistoryV1Sql, historyEvent)
-	return true, err
-}
-
-func handleAddTaskCommentEvent(tx *sqlx.Tx, event *AddTaskCommentEvent) (bool, error) {
+func (h *StateEventHandler) HandleTaskAddCommentEvent(tx *sqlx.Tx, event *generated.TaskAddCommentEvent) (bool, error) {
 	historyEvent := AddTaskHistoryEvent{
 		TaskId:      event.TaskId,
 		UpdateType:  "add_comment",
@@ -120,34 +53,20 @@ func handleAddTaskCommentEvent(tx *sqlx.Tx, event *AddTaskCommentEvent) (bool, e
 
 // State queries
 const getTaskHistoryV1Sql = `
-SELECT id, task_id, update_type, system_comment, user_comment, created_at
+SELECT id, task_id AS taskid, update_type AS updatetype, system_comment AS systemcomment, user_comment AS usercomment, created_at AS createdat
 FROM task_history_v1
 WHERE task_id = $1
 ORDER BY created_at DESC;
 `
 
-type TaskHistoryV1 struct {
-	Id            int       `db:"id" json:"id"`
-	TaskId        int       `db:"task_id" json:"taskId"`
-	UpdateType    string    `db:"update_type" json:"updateType"`
-	SystemComment string    `db:"system_comment" json:"systemComment"`
-	UserComment   *string   `db:"user_comment" json:"userComment"`
-	CreatedAt     time.Time `db:"created_at" json:"createdAt"`
-}
-
-type TaskHistoryV1Response struct {
-	History []TaskHistoryV1 `json:"history"`
-	Title   string          `json:"title"`
-}
-
-func taskHistoryDBForTask(db *sqlx.DB, taskId int) (TaskHistoryV1Response, error) {
-	var history []TaskHistoryV1 = make([]TaskHistoryV1, 0)
-	err := db.Select(&history, getTaskHistoryV1Sql, taskId)
+func (r *StateResolver) GetApiTaskHistory(db *sqlx.DB, id int) (generated.TaskHistoryResponse, error) {
+	var history []generated.TaskHistory = make([]generated.TaskHistory, 0)
+	err := db.Select(&history, getTaskHistoryV1Sql, id)
 
 	var title string
 	if err == nil {
-		err = db.Get(&title, getTaskTitleV1Sql, taskId)
+		err = db.Get(&title, getTaskTitleV1Sql, id)
 	}
 
-	return TaskHistoryV1Response{History: history, Title: title}, err
+	return generated.TaskHistoryResponse{History: history, Title: title}, err
 }
