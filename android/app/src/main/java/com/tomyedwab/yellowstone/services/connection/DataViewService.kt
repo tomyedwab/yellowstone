@@ -2,14 +2,11 @@ package com.tomyedwab.yellowstone.services.connection
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.MutableLiveData
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.tomyedwab.yellowstone.provider.connection.ConnectionState
 import com.tomyedwab.yellowstone.provider.connection.HubConnectionState
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
 
 data class DataViewResult<T>(
     val loading: Boolean,
@@ -40,13 +37,7 @@ class DataViewService(private val authService: AuthService) {
         val result = MediatorLiveData<DataViewResult<T>>()
         
         result.addSource(connectionState) { state ->
-            if (state.state != ConnectionState.CONNECTED ||
-                state.backendComponentIDs == null ||
-                state.backendEventIDs == null ||
-                state.refreshToken == null ||
-                state.accessToken == null ||
-                state.loginAccount == null) {
-                
+            if (state !is HubConnectionState.Connected) {
                 result.value = DataViewResult(loading = true, data = null)
                 return@addSource
             }

@@ -6,6 +6,7 @@ sealed class ConnectionAction {
     data class StartLogin(val account: HubAccount, val password: String) : ConnectionAction()
     data class StartConnection(val account: HubAccount, val refreshToken: String) : ConnectionAction()
     data class ReceivedAccessToken(val accessToken: String, val refreshToken: String) : ConnectionAction()
+    data class RefreshTokenInvalid(val error: String) : ConnectionAction()
     data class AccessTokenRevoked(val message: String?) : ConnectionAction()
     data class MappedComponentIDs(val componentIDs: BackendComponentIDs) : ConnectionAction()
     data class ConnectionFailed(val error: String) : ConnectionAction()

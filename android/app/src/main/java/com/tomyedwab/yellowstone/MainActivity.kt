@@ -16,26 +16,10 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.tomyedwab.yellowstone.databinding.ActivityMainBinding
 import com.tomyedwab.yellowstone.provider.connection.ConnectionAction
-import com.tomyedwab.yellowstone.provider.connection.ConnectionState
+import com.tomyedwab.yellowstone.provider.connection.HubConnectionState
 import com.tomyedwab.yellowstone.provider.connection.HubAccountList
 import com.tomyedwab.yellowstone.provider.storage.ConnectionStorageProvider
-import com.tomyedwab.yellowstone.services.connection.ComponentAsset
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
-
-object ComponentAssets {
-    /**
-     * Map of component names to their corresponding asset files
-     * This defines which embedded binaries are available for each component
-     */
-    val COMPONENT_ASSET_MAP = mapOf(
-        "yellowstone" to ComponentAsset(
-            binaryAssetName = "tasks.zip",
-            md5AssetName = "tasks.md5"
-        )
-        // Add more components here as needed
-        // "other-component" to ComponentAsset("other-binary", "other-binary.md5")
-    )
-}
 
 interface ConnectionServiceListener {
     fun onConnectionServiceReady(connectionService: ConnectionService)
@@ -55,12 +39,9 @@ class MainActivity : AppCompatActivity() {
             val binder = service as ConnectionService.ConnectionBinder
             connectionService = binder.getService()
             isBound = true
-            
-            // Initialize the component asset map
-            connectionService?.initializeComponentAssets(ComponentAssets.COMPONENT_ASSET_MAP)
-            
+
             setupObservers()
-            
+
             // Notify all listeners that ConnectionService is ready
             connectionService?.let { cs ->
                 connectionServiceListeners.forEach { listener ->
@@ -96,20 +77,20 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-        
+
         // Start and bind to the connection service
         val intent = Intent(this, ConnectionService::class.java)
         startService(intent)
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
-    
+
     override fun onResume() {
         super.onResume()
         // Reset login activity flag when MainActivity resumes
         isLoginActivityLaunched = false
         // Check connection state when activity resumes
         connectionService?.getConnectionStateProvider()?.connectionState?.value?.let { state ->
-            handleConnectionStateChange(state.state)
+            handleConnectionStateChange(state)
         }
     }
 
@@ -123,15 +104,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupObservers() {
         connectionService?.getConnectionStateProvider()?.connectionState?.observe(this) { state ->
-            handleConnectionStateChange(state.state)
+            handleConnectionStateChange(state)
             // Refresh the menu when connection state changes
             invalidateOptionsMenu()
         }
     }
-    
-    private fun handleConnectionStateChange(connectionState: ConnectionState) {
+
+    private fun handleConnectionStateChange(connectionState: HubConnectionState) {
         when (connectionState) {
-            ConnectionState.CONNECTED -> {
+            is HubConnectionState.Connected -> {
                 // Show main UI
                 binding.navView.visibility = android.view.View.VISIBLE
                 isLoginActivityLaunched = false
@@ -172,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         val accountInfoItem = menu.findItem(R.id.action_account_info)
         val connectionState = connectionService?.getConnectionStateProvider()?.connectionState?.value
 
-        if (connectionState?.state == ConnectionState.CONNECTED && connectionState.loginAccount != null) {
+        if (connectionState is HubConnectionState.Connected) {
             accountInfoItem.title = "${connectionState.loginAccount.name} (${connectionState.loginAccount.url})"
             accountInfoItem.isEnabled = true
         } else {

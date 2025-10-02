@@ -1,6 +1,9 @@
 package com.tomyedwab.yellowstone.services.connection
 
+import AssetLoader
+import AssetLoaderInterface
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
@@ -11,298 +14,206 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.tomyedwab.yellowstone.provider.connection.*
-import com.tomyedwab.yellowstone.utils.BinaryReader
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
-data class ComponentAsset(val binaryAssetName: String, val md5AssetName: String)
+enum class JobType {
+    LOGIN,
+    ACCESS_TOKEN,
+    APP_COMPONENTS,
+    EVENT_SYNC,
+    PUBLISH_EVENT,
+    EVENT_POLL,
+}
 
-class ConnectionService : Service(), ViewModelStoreOwner {
+data class JobParameters(
+    val type: JobType,
+    val url: String,
+    val loginId: String?,
+    val loginPassword: String?,
+    val loginAccount: HubAccount?,
+    val refreshToken: String?,
+    val accessToken: String?,
+    val backendComponentIDs: BackendComponentIDs?,
+    val eventToPublish: PendingEvent?,
+    val currentEventIDs: Map<String, Int>?,
+)
 
-    private val binder = ConnectionBinder()
-    private lateinit var connectionStateProvider: ConnectionStateProvider
-    // WARNING: Enable insecure connections for development/self-hosted environments only
-    // In production, set this to false and use proper SSL certificates
-    private val authService = AuthService(allowInsecureConnections = true)
-    private val dataViewService = DataViewService(authService)
+class ConnectionServiceCoroutineManager(
+    val authService: AuthService,
+    val stateDispatcher: StateDispatcher,
+    val assetLoader: AssetLoaderInterface,
+) {
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private var currentJob: Job? = null
+    private var currentJobParameters: JobParameters? = null
     private val gson = Gson()
     private val jsonMediaType = "application/json".toMediaType()
 
-    // Component asset map - will be initialized via initializeComponentAssets()
-    private lateinit var componentAssetMap: Map<String, ComponentAsset>
-
-    // Component hashes loaded from assets
-    private var componentHashes = ConcurrentHashMap<String, String>()
-
-    // Binary reader for lazy loading
-    private lateinit var binaryReader: BinaryReader
-
-    // Coroutine scope for background operations
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    // Track current state to avoid redundant operations
-    private var lastProcessedState: HubConnectionState? = null
-
-    // Track polling state to prevent multiple polling threads
-    private var isPolling = false
-
-    private val _viewModelStore = ViewModelStore()
-    override val viewModelStore: ViewModelStore
-        get() = _viewModelStore
-
-    inner class ConnectionBinder : Binder() {
-        fun getService(): ConnectionService = this@ConnectionService
+    fun shutdown() {
+        currentJob?.cancel()
+        coroutineScope.cancel()
     }
 
-    override fun onBind(intent: Intent): IBinder = binder
-
-    override fun onCreate() {
-        super.onCreate()
-        connectionStateProvider = ConnectionStateProvider()
-        binaryReader = BinaryReader(this)
-
-        // Start observing connection state changes
-        connectionStateProvider.connectionState.observeForever { state -> handleStateChange(state) }
-
-        // Component hashes will be loaded when initializeComponentAssets() is called
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        serviceScope.cancel()
-        _viewModelStore.clear()
-    }
-
-    fun getConnectionStateProvider(): ConnectionStateProvider = connectionStateProvider
-    fun getAuthService(): AuthService = authService
-    fun getDataViewService(): DataViewService = dataViewService
-
-    /**
-     * Initialize the component asset map. Must be called after service binding.
-     * @param componentAssets Map of component names to ComponentAsset instances
-     */
-    fun initializeComponentAssets(componentAssets: Map<String, ComponentAsset>) {
-        componentAssetMap = componentAssets
-        // Reload component hashes with the new asset map
-        loadComponentHashes()
-    }
-
-    private fun loadComponentHashes() {
-        serviceScope.launch {
-            if (!::componentAssetMap.isInitialized) {
-                Log.w("ConnectionService", "Component asset map not initialized yet")
-                return@launch
-            }
-
-            componentAssetMap.forEach { (componentName, assetInfo) ->
-                try {
-                    // Read MD5 hash from assets
-                    val md5Hash =
-                            assets.open(assetInfo.md5AssetName).use { inputStream ->
-                                inputStream.bufferedReader().readText().trim()
-                            }
-                    componentHashes[componentName] = md5Hash
-                    Log.i("ConnectionService", "Loaded hash for $componentName: $md5Hash")
-                } catch (e: Exception) {
-                    Log.e("ConnectionService", "Failed to load hash for $componentName", e)
-                }
-            }
-            Log.i("ConnectionService", "Component hashes loaded: ${componentHashes.keys}")
-        }
-    }
-
-    /**
-     * Lazily loads a component binary when needed
-     * @param componentName The name of the component to load
-     * @return ByteArray containing the binary data, or null if not found
-     */
-    suspend fun loadComponentBinary(componentName: String): ByteArray? {
-        return withContext(Dispatchers.IO) {
-            try {
-                if (!::componentAssetMap.isInitialized) {
-                    Log.w("ConnectionService", "Component asset map not initialized yet")
-                    return@withContext null
-                }
-
-                val assetInfo = componentAssetMap[componentName]
-                if (assetInfo != null) {
-                    val binaryData =
-                            assets.open(assetInfo.binaryAssetName).use { inputStream ->
-                                inputStream.readBytes()
-                            }
-                    Log.i(
-                            "ConnectionService",
-                            "Loaded binary for $componentName: ${binaryData.size} bytes"
-                    )
-                    binaryData
-                } else {
-                    Log.w(
-                            "ConnectionService",
-                            "No asset mapping found for component: $componentName"
-                    )
-                    null
-                }
-            } catch (e: Exception) {
-                Log.e("ConnectionService", "Failed to load binary for $componentName", e)
-                null
-            }
-        }
-    }
-
-    private fun handleStateChange(state: HubConnectionState) {
-        // Avoid processing the same state multiple times
-        if (lastProcessedState == state) return
-        lastProcessedState = state
-
-        when (state.state) {
-            ConnectionState.CONNECTING -> handleConnectingState(state)
-            ConnectionState.CONNECTED -> handleConnectedState(state)
-            else -> {
-                /* No action needed for other states */
-            }
-        }
-    }
-
-    private fun handleConnectingState(state: HubConnectionState) {
-        serviceScope.launch {
-            try {
-                when {
-                    // Case 1: Ready to wait for event sync
-                    state.loginAccount != null &&
-                            state.refreshToken != null &&
-                            state.accessToken != null &&
-                            state.backendComponentIDs != null -> {
-                        waitForEventSync(
-                                state.loginAccount.url,
-                                state.refreshToken,
-                                state.accessToken,
-                                state.backendComponentIDs
-                        )
-                    }
-
-                    // Case 2: Ready to register app components
-                    state.loginAccount != null &&
-                            state.refreshToken != null &&
-                            state.accessToken != null -> {
-                        sendAppRegistrationRequest(
-                                state.loginAccount.url,
-                                state.refreshToken,
-                                state.accessToken
-                        )
-                    }
-
-                    // Case 3: Need to get access token
-                    state.loginAccount != null && state.refreshToken != null -> {
-                        sendAccessTokenRequest(state.loginAccount.url, state.refreshToken)
-                    }
-
-                    // Case 4: Need to login with username/password
-                    state.loginAccount != null &&
-                            state.loginPassword != null &&
-                            state.refreshToken == null -> {
-                        sendLoginRequest(
-                                state.loginAccount.url,
-                                state.loginAccount.id, // Using id as username
-                                state.loginPassword,
-                                state.loginAccount
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                connectionStateProvider.dispatch(
-                        ConnectionAction.ConnectionFailed("Connection error: ${e.message}")
+    // Kicks off a new background coroutine if we need to based on the current
+    // state and the currently running job. Does nothing if the job parameters
+    // haven't changed, or cancels the existing job and kick off a new one.
+    fun handleStateUpdate(state: HubConnectionState) {
+        val desiredJobParameters: JobParameters? = when (state) {
+            is HubConnectionState.Connecting.LoggingIn -> {
+                JobParameters(
+                    JobType.LOGIN,
+                    state.loginAccount.url,
+                    state.loginAccount.id,
+                    state.loginPassword!!,
+                    state.loginAccount,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                 )
             }
-        }
-    }
 
-    private fun handleConnectedState(state: HubConnectionState) {
-        // Start polling for changes when connected
-        if (state.loginAccount != null &&
-                        state.refreshToken != null &&
-                        state.accessToken != null &&
-                        state.backendEventIDs != null
-        ) {
+            is HubConnectionState.Connecting.RefreshingAccessToken -> {
+                JobParameters(
+                    JobType.ACCESS_TOKEN,
+                    state.loginAccount.url,
+                    null,
+                    null,
+                    null,
+                    state.refreshToken,
+                    null,
+                    null,
+                    null,
+                    null,
+                )
+            }
 
-            // Publish any pending events in parallel with polling
-            if (state.pendingEvents.isNotEmpty()) {
-                serviceScope.launch {
-                    publishPendingEvents(
-                            state.loginAccount.url,
-                            state.refreshToken,
-                            state.accessToken,
-                            state.pendingEvents
+            is HubConnectionState.Connecting.RegisteringAppComponents -> {
+                JobParameters(
+                    JobType.APP_COMPONENTS,
+                    state.loginAccount.url,
+                    null,
+                    null,
+                    null,
+                    state.refreshToken,
+                    state.accessToken,
+                    null,
+                    null,
+                    null,
+                )
+            }
+
+            is HubConnectionState.Connecting.InitialConnection -> {
+                JobParameters(
+                    JobType.EVENT_SYNC,
+                    state.loginAccount.url,
+                    null,
+                    null,
+                    null,
+                    state.refreshToken,
+                    state.accessToken,
+                    state.backendComponentIDs,
+                    null,
+                    null,
+                )
+            }
+
+            is HubConnectionState.Connected -> {
+                if (state.pendingEvents.isNotEmpty()) {
+                    JobParameters(
+                        JobType.PUBLISH_EVENT,
+                        state.loginAccount.url,
+                        null,
+                        null,
+                        null,
+                        state.refreshToken,
+                        state.accessToken,
+                        state.backendComponentIDs,
+                        state.pendingEvents[0],
+                        null,
+                    )
+                } else {
+                    JobParameters(
+                        JobType.EVENT_POLL,
+                        state.loginAccount.url,
+                        null,
+                        null,
+                        null,
+                        state.refreshToken,
+                        state.accessToken,
+                        state.backendComponentIDs,
+                        null,
+                        state.backendEventIDs,
                     )
                 }
             }
 
-            // Only start polling if not already polling
-            if (!isPolling) {
-                isPolling = true
-                serviceScope.launch {
-                    try {
-                        pollForChanges(
-                                state.loginAccount.url,
-                                state.refreshToken,
-                                state.accessToken,
-                                state.backendEventIDs
-                        )
-                    } finally {
-                        isPolling = false
-                    }
-                }
-            }
+            else -> null
         }
-    }
 
-    private suspend fun publishPendingEvents(
-            url: String,
-            refreshToken: String,
-            accessToken: String,
-            pendingEvents: List<PendingEvent>
-    ) {
-        try {
-            for (event in pendingEvents) {
-                val eventJson = gson.toJson(event)
-                val requestBody = eventJson.toRequestBody(jsonMediaType)
-
-                val response =
-                        authService.fetchAuthenticated(
-                                "$url/events/publish",
-                                refreshToken,
-                                accessToken,
-                                "POST",
-                                requestBody
-                        )
-
-                response.use {
-                    if (it.isSuccessful) {
-                        Log.i(
-                                "ConnectionService",
-                                "Successfully published event: ${event.clientId}"
-                        )
-                        connectionStateProvider.dispatch(
-                                ConnectionAction.EventPublished(event.clientId)
-                        )
-                    } else {
-                        Log.e(
-                                "ConnectionService",
-                                "Failed to publish event ${event.clientId}: ${it.code} - ${it.body?.string()}"
-                        )
-                        throw Exception("Event publishing failed: ${it.code}")
+        if (desiredJobParameters != currentJobParameters) {
+            val oldJob = currentJob
+            currentJobParameters = desiredJobParameters
+            currentJob = coroutineScope.launch {
+                if (oldJob != null) {
+                    oldJob.cancel()
+                    oldJob.join()
+                }
+                if (desiredJobParameters != null) {
+                    when (desiredJobParameters.type) {
+                        JobType.LOGIN -> {
+                            sendLoginRequest(
+                                desiredJobParameters.url,
+                                desiredJobParameters.loginId!!,
+                                desiredJobParameters.loginPassword!!,
+                                desiredJobParameters.loginAccount!!,
+                            )
+                        }
+                        JobType.ACCESS_TOKEN -> {
+                            sendAccessTokenRequest(
+                                desiredJobParameters.url,
+                                desiredJobParameters.refreshToken!!,
+                            )
+                        }
+                        JobType.APP_COMPONENTS -> {
+                            sendAppRegistrationRequest(
+                                desiredJobParameters.url,
+                                desiredJobParameters.refreshToken!!,
+                                desiredJobParameters.accessToken!!,
+                            )
+                        }
+                        JobType.EVENT_SYNC -> {
+                            waitForEventSync(
+                                desiredJobParameters.url,
+                                desiredJobParameters.refreshToken!!,
+                                desiredJobParameters.accessToken!!,
+                                desiredJobParameters.backendComponentIDs!!,
+                            )
+                        }
+                        JobType.PUBLISH_EVENT -> {
+                            publishEvent(
+                                desiredJobParameters.url,
+                                desiredJobParameters.refreshToken!!,
+                                desiredJobParameters.accessToken!!,
+                                desiredJobParameters.eventToPublish!!,
+                            )
+                        }
+                        JobType.EVENT_POLL -> {
+                            pollEvents(
+                                desiredJobParameters.url,
+                                desiredJobParameters.refreshToken!!,
+                                desiredJobParameters.accessToken!!,
+                                desiredJobParameters.currentEventIDs!!,
+                            )
+                        }
                     }
                 }
             }
-        } catch (e: UnauthenticatedError) {
-            connectionStateProvider.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
-            )
-        } catch (e: Exception) {
-            Log.e("ConnectionService", "Error publishing events: ${e.message}", e)
-            // Continue with polling even if event publishing fails
         }
     }
 
@@ -314,11 +225,11 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     ) {
         try {
             val refreshToken = authService.doLogin(url, username, password)
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.StartConnection(account, refreshToken)
             )
         } catch (e: Exception) {
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.ConnectionFailed("Login failed: ${e.message}")
             )
         }
@@ -327,13 +238,11 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     private suspend fun sendAccessTokenRequest(url: String, refreshToken: String) {
         try {
             val (accessToken, newRefreshToken) = authService.refreshAccessToken(url, refreshToken)
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.ReceivedAccessToken(accessToken, newRefreshToken)
             )
         } catch (e: Exception) {
-            connectionStateProvider.dispatch(
-                    ConnectionAction.ConnectionFailed("Token refresh failed: ${e.message}")
-            )
+            stateDispatcher.dispatch(ConnectionAction.RefreshTokenInvalid(e.message ?: "Unknown error"))
         }
     }
 
@@ -343,6 +252,7 @@ class ConnectionService : Service(), ViewModelStoreOwner {
             accessToken: String
     ) {
         try {
+            val componentHashes = assetLoader.loadComponentHashes()
             if (componentHashes.isEmpty()) {
                 throw Exception("Missing component hashes")
             }
@@ -359,6 +269,9 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                             requestBody
                     )
 
+            val componentIDs = mutableMapOf<String, String>()
+            val componentsToInstall = mutableListOf<String>()
+
             response.use {
                 if (it.isSuccessful) {
                     val responseJson =
@@ -368,50 +281,43 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                             ) as
                                     Map<String, String?>
 
-                    val componentIDs = mutableMapOf<String, String>()
-
                     // Handle components that need installation
                     for ((appName, instanceId) in responseJson) {
                         if (instanceId != null) {
                             componentIDs[appName] = instanceId
                         } else {
-                            // Component needs to be installed - send binary to server
-                            Log.i("ConnectionService", "Installing component: $appName")
-                            val installedInstanceId =
-                                    componentHashes[appName]?.let { it1 ->
-                                        installComponent(
-                                                url,
-                                                refreshToken,
-                                                accessToken,
-                                                appName,
-                                                it1
-                                        )
-                                    }
-                            if (installedInstanceId != null) {
-                                componentIDs[appName] = installedInstanceId
-                                Log.i(
-                                        "ConnectionService",
-                                        "Successfully installed $appName with instance ID: $installedInstanceId"
-                                )
-                            } else {
-                                throw Exception("Failed to install component: $appName")
-                            }
+                            componentsToInstall.add(appName)
                         }
                     }
-
-                    connectionStateProvider.dispatch(
-                            ConnectionAction.MappedComponentIDs(BackendComponentIDs(componentIDs))
-                    )
                 } else {
                     throw Exception("App registration failed: ${it.code}")
                 }
             }
+
+            for (componentName in componentsToInstall) {
+                // Component needs to be installed - send binary to server
+                Log.i("ConnectionService", "Installing component: $componentName")
+                val installedInstanceId = installComponent(url, refreshToken, accessToken, componentName, componentHashes[componentName]!!)
+                if (installedInstanceId != null) {
+                    componentIDs[componentName] = installedInstanceId
+                    Log.i(
+                            "ConnectionService",
+                            "Successfully installed $componentName with instance ID: $installedInstanceId"
+                    )
+                } else {
+                    throw Exception("Failed to install component: $componentName")
+                }
+            }
+
+            stateDispatcher.dispatch(
+                    ConnectionAction.MappedComponentIDs(BackendComponentIDs(componentIDs))
+                )
         } catch (e: UnauthenticatedError) {
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: Exception) {
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.ConnectionFailed("App registration failed: ${e.message}")
             )
         }
@@ -434,7 +340,7 @@ class ConnectionService : Service(), ViewModelStoreOwner {
     ): String? {
         return try {
             // Load the binary for this component
-            val binaryData = loadComponentBinary(componentName)
+            val binaryData = assetLoader.loadComponentBinary(componentName)
             if (binaryData == null) {
                 Log.e("ConnectionService", "No binary found for component: $componentName")
                 return null
@@ -492,15 +398,15 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 }
             }
         } catch (e: UnauthenticatedError) {
-            connectionStateProvider.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+            stateDispatcher.dispatch(
+                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
             null
         } catch (e: Exception) {
             Log.e(
-                    "ConnectionService",
-                    "Exception during component installation for $componentName",
-                    e
+                "ConnectionService",
+                "Exception during component installation for $componentName",
+                e
             )
             null
         }
@@ -542,7 +448,7 @@ class ConnectionService : Service(), ViewModelStoreOwner {
 
                         val foundUninitialized = data.values.any { eventId -> eventId == -1 }
                         if (!foundUninitialized) {
-                            connectionStateProvider.dispatch(
+                            stateDispatcher.dispatch(
                                     ConnectionAction.ConnectionSucceeded(data)
                             )
                             return
@@ -553,17 +459,63 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                 delay(1000) // Wait 1 second before next poll
             }
         } catch (e: UnauthenticatedError) {
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: Exception) {
-            connectionStateProvider.dispatch(
+            stateDispatcher.dispatch(
                     ConnectionAction.ConnectionFailed("Event sync failed: ${e.message}")
             )
         }
     }
 
-    private suspend fun pollForChanges(
+    private suspend fun publishEvent(
+            url: String,
+            refreshToken: String,
+            accessToken: String,
+            event: PendingEvent
+    ) {
+        try {
+            val eventJson = gson.toJson(event)
+            val requestBody = eventJson.toRequestBody(jsonMediaType)
+
+            val response =
+                    authService.fetchAuthenticated(
+                            "$url/events/publish",
+                            refreshToken,
+                            accessToken,
+                            "POST",
+                            requestBody
+                    )
+
+            response.use {
+                if (it.isSuccessful) {
+                    Log.i(
+                            "ConnectionService",
+                            "Successfully published event: ${event.clientId}"
+                    )
+                    stateDispatcher.dispatch(
+                            ConnectionAction.EventPublished(event.clientId)
+                    )
+                } else {
+                    Log.e(
+                            "ConnectionService",
+                            "Failed to publish event ${event.clientId}: ${it.code} - ${it.body?.string()}"
+                    )
+                    throw Exception("Event publishing failed: ${it.code}")
+                }
+            }
+        } catch (e: UnauthenticatedError) {
+            stateDispatcher.dispatch(
+                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+            )
+        } catch (e: Exception) {
+            Log.e("ConnectionService", "Error publishing events: ${e.message}", e)
+            // Continue with polling even if event publishing fails
+        }
+    }
+
+    private suspend fun pollEvents(
             url: String,
             refreshToken: String,
             accessToken: String,
@@ -597,11 +549,11 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                                     ) as
                                             Map<String, Int>
                             currentEventIDs = data
-                            connectionStateProvider.dispatch(ConnectionAction.EventsUpdated(data))
+                            stateDispatcher.dispatch(ConnectionAction.EventsUpdated(data))
                         }
                         304 -> {
                             // Not modified - dispatch the same event IDs
-                            connectionStateProvider.dispatch(
+                            stateDispatcher.dispatch(
                                     ConnectionAction.EventsUpdated(currentEventIDs)
                             )
                         }
@@ -611,16 +563,69 @@ class ConnectionService : Service(), ViewModelStoreOwner {
                     }
                 }
             } catch (e: UnauthenticatedError) {
-                connectionStateProvider.dispatch(
+                stateDispatcher.dispatch(
                         ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
                 )
             } catch (e: Exception) {
                 // In production, this should transition to "reconnecting" state
-                connectionStateProvider.dispatch(
+                stateDispatcher.dispatch(
                         ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
                 )
                 break // Exit the polling loop on error
             }
         }
     }
+}
+
+// A service that sets up the connection state provider and hooks it up to the
+// coroutine manager. While the sub-components are written in a functional style
+// for ease of testing, this is the imperative shell.
+class ConnectionService : Service(), ViewModelStoreOwner {
+
+    private val binder = ConnectionBinder()
+    private lateinit var connectionStateProvider: ConnectionStateProvider
+    private lateinit var dataViewService: DataViewService
+
+    // Coroutine manager for actually kicking off background requests
+    private lateinit var coroutineManager: ConnectionServiceCoroutineManager
+
+    private val _viewModelStore = ViewModelStore()
+    override val viewModelStore: ViewModelStore
+        get() = _viewModelStore
+
+    inner class ConnectionBinder : Binder() {
+        fun getService(): ConnectionService = this@ConnectionService
+    }
+
+    override fun onBind(intent: Intent): IBinder = binder
+
+    override fun onCreate() {
+        super.onCreate()
+
+        connectionStateProvider = ConnectionStateProvider()
+
+        // WARNING: Enable insecure connections for development/self-hosted environments only
+        // In production, set this to false and use proper SSL certificates
+        val authService = AuthService(allowInsecureConnections = true)
+
+        coroutineManager = ConnectionServiceCoroutineManager(
+            authService,
+            connectionStateProvider,
+            AssetLoader(this),
+        )
+
+        dataViewService = DataViewService(authService)
+
+        // Once coroutine manager is initialized, we can start responding to state changes
+        connectionStateProvider.connectionState.observeForever { state -> coroutineManager.handleStateUpdate(state) }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        coroutineManager.shutdown()
+        _viewModelStore.clear()
+    }
+
+    fun getConnectionStateProvider(): ConnectionStateProvider = connectionStateProvider
+    fun getDataViewService(): DataViewService = dataViewService
 }

@@ -17,6 +17,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -104,7 +110,7 @@ tasks.register("buildGoBinary") {
         val rootDir = project.rootDir.parentFile
         val buildScript = File(rootDir, "scripts/build-go-binary.sh")
         val buildDir = File(rootDir, "build")
-        val assetsDir = File(project.projectDir, "src/main/assets")
+        val assetsDir = File(project.projectDir, "src/main/assets/components")
 
         // Run the Go build script
         exec {
@@ -157,6 +163,13 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("org.mockito:mockito-core:5.5.0")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 }

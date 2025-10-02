@@ -1,13 +1,5 @@
 package com.tomyedwab.yellowstone.provider.connection
 
-enum class ConnectionState {
-    NOT_INITIALIZED,
-    NO_SELECTION,
-    LOGIN,
-    CONNECTING,
-    CONNECTED
-}
-
 data class HubAccount(
     val id: String,
     val name: String,
@@ -31,15 +23,69 @@ data class PendingEvent(
     val data: Map<String, Any?>
 )
 
-data class HubConnectionState(
-    val state: ConnectionState = ConnectionState.NOT_INITIALIZED,
-    val accountList: HubAccountList? = null,
-    val loginAccount: HubAccount? = null,
-    val loginPassword: String? = null,
-    val refreshToken: String? = null,
-    val accessToken: String? = null,
-    val backendComponentIDs: BackendComponentIDs? = null,
-    val backendEventIDs: Map<String, Int>? = null,
-    val connectionError: String? = null,
-    val pendingEvents: List<PendingEvent> = emptyList()
-)
+sealed class HubConnectionState(val accountList: HubAccountList) {
+    // We haven't loaded the account list yet
+    class Uninitialized() : HubConnectionState(HubAccountList(emptyList(), null))
+
+    // We are waiting for the user to select an account or log in
+    class WaitingForLogin(
+        accountList: HubAccountList,
+        val loginAccount: HubAccount? = null,
+        val loginPassword: String? = null,
+        val connectionError: String? = null
+    ) : HubConnectionState(accountList)
+
+    // Shared class for all the connecting-related states below
+    sealed class Connecting(
+        accountList: HubAccountList,
+        val loginAccount: HubAccount,
+        val loginPassword: String?) : HubConnectionState(accountList) {
+
+        // We are passing account credentials to the hub and waiting for a refresh token
+        class LoggingIn(
+            accountList: HubAccountList,
+            loginAccount: HubAccount,
+            loginPassword: String?
+        ) : Connecting(accountList, loginAccount, loginPassword)
+
+        // We have a refresh token and are waiting for the access token
+        class RefreshingAccessToken(
+            accountList: HubAccountList,
+            loginAccount: HubAccount,
+            loginPassword: String?,
+            val refreshToken: String
+        ) : Connecting(accountList, loginAccount, loginPassword)
+
+        // We need to check that all the components are registered
+        class RegisteringAppComponents(
+            accountList: HubAccountList,
+            loginAccount: HubAccount,
+            loginPassword: String?,
+            val refreshToken: String,
+            val accessToken: String
+        ) : Connecting(accountList, loginAccount, loginPassword)
+
+        // Components are registered and we are waiting for initial polling to
+        // succeed
+        class InitialConnection(
+            accountList: HubAccountList,
+            loginAccount: HubAccount,
+            loginPassword: String?,
+            val refreshToken: String,
+            val accessToken: String,
+            val backendComponentIDs: BackendComponentIDs,
+        ) : Connecting(accountList, loginAccount, loginPassword)
+    }
+
+    // We are connected to the backend, all components have been installed, and
+    // are ready to query data and send events
+    class Connected(
+        accountList: HubAccountList,
+        val loginAccount: HubAccount,
+        val refreshToken: String,
+        val accessToken: String,
+        val backendComponentIDs: BackendComponentIDs,
+        val backendEventIDs: Map<String, Int>,
+        val pendingEvents: List<PendingEvent> = emptyList()
+    ) : HubConnectionState(accountList)
+}

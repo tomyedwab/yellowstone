@@ -20,7 +20,7 @@ class ApiRoutes(
     fun getTaskList(listId: Int): LiveData<DataViewResult<TaskResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/task/list",
             apiParams = mapOf(
                 "listId" to listId.toString()
@@ -34,7 +34,7 @@ class ApiRoutes(
     fun getTaskGet(id: Int): LiveData<DataViewResult<Task>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/task/get",
             apiParams = mapOf(
                 "id" to id.toString()
@@ -48,7 +48,7 @@ class ApiRoutes(
     fun getTaskHistory(id: Int): LiveData<DataViewResult<TaskHistoryResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/task/history",
             apiParams = mapOf(
                 "id" to id.toString()
@@ -62,7 +62,7 @@ class ApiRoutes(
     fun getTasklistGet(id: Int): LiveData<DataViewResult<TaskList>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/get",
             apiParams = mapOf(
                 "id" to id.toString()
@@ -76,7 +76,7 @@ class ApiRoutes(
     fun getTasklistAll(): LiveData<DataViewResult<TaskListResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/all",
             apiParams = emptyMap(),
             typeToken = object : TypeToken<TaskListResponse>() {}
@@ -88,7 +88,7 @@ class ApiRoutes(
     fun getTasklistTodo(): LiveData<DataViewResult<TaskListResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/todo",
             apiParams = emptyMap(),
             typeToken = object : TypeToken<TaskListResponse>() {}
@@ -100,7 +100,7 @@ class ApiRoutes(
     fun getTasklistTemplate(): LiveData<DataViewResult<TaskListResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/template",
             apiParams = emptyMap(),
             typeToken = object : TypeToken<TaskListResponse>() {}
@@ -112,7 +112,7 @@ class ApiRoutes(
     fun getTasklistArchived(): LiveData<DataViewResult<TaskListResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/archived",
             apiParams = emptyMap(),
             typeToken = object : TypeToken<TaskListResponse>() {}
@@ -124,7 +124,7 @@ class ApiRoutes(
     fun getTasklistMetadata(): LiveData<DataViewResult<TaskListMetadataResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/metadata",
             apiParams = emptyMap(),
             typeToken = object : TypeToken<TaskListMetadataResponse>() {}
@@ -136,7 +136,7 @@ class ApiRoutes(
     fun getTasklistRecentComments(listId: Int): LiveData<DataViewResult<TaskRecentCommentResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/recent_comments",
             apiParams = mapOf(
                 "listId" to listId.toString()
@@ -150,7 +150,7 @@ class ApiRoutes(
     fun getTasklistLabels(listId: Int): LiveData<DataViewResult<TaskLabelsResponse>> {
         return dataViewService.createDataView(
             connectionState = connectionState,
-            componentName = "yellowstone",
+            componentName = "tasks",
             apiPath = "api/tasklist/labels",
             apiParams = mapOf(
                 "listId" to listId.toString()

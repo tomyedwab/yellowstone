@@ -8,13 +8,11 @@ import android.os.Bundle
 import android.os.IBinder
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.tabs.TabLayout
-import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.databinding.ActivityLoginBinding
 import com.tomyedwab.yellowstone.provider.connection.*
 import com.tomyedwab.yellowstone.provider.storage.ConnectionStorageConnector
@@ -33,16 +31,13 @@ class LoginActivity : AppCompatActivity() {
             val binder = service as ConnectionService.ConnectionBinder
             connectionService = binder.getService()
             isBound = true
-            
-            // Initialize the component asset map (safe to call multiple times)
-            connectionService?.initializeComponentAssets(ComponentAssets.COMPONENT_ASSET_MAP)
-            
+
             // Initialize storage connector
             connectionService?.getConnectionStateProvider()?.let { stateProvider ->
                 connectionStorageConnector = ConnectionStorageConnector(this@LoginActivity, stateProvider)
                 connectionStorageConnector?.initialize()
             }
-            
+
             setupObservers()
         }
 
@@ -54,13 +49,13 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
+
         setupClickListeners()
         setupTabListener()
-        
+
         // Start and bind to the connection service
         val intent = Intent(this, ConnectionService::class.java)
         startService(intent)
@@ -76,14 +71,14 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    
+
     private fun setupObservers() {
         connectionService?.getConnectionStateProvider()?.connectionState?.observe(this) { state ->
             currentState = state
             updateUI(state)
 
             // Handle successful connection
-            if (state.state == ConnectionState.CONNECTED) {
+            if (state is HubConnectionState.Connected) {
                 // If this is a fresh login (no MainActivity in background), start MainActivity
                 if (isTaskRoot) {
                     startActivity(Intent(this, MainActivity::class.java))
@@ -92,7 +87,7 @@ class LoginActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun setupClickListeners() {
         binding.loginButton.setOnClickListener {
             val serverUrl = binding.serverUrlInput.text.toString()
@@ -199,18 +194,29 @@ class LoginActivity : AppCompatActivity() {
 
         return cardView
     }
-    
+
     private fun updateUI(state: com.tomyedwab.yellowstone.provider.connection.HubConnectionState) {
-        when (state.state) {
-            ConnectionState.NOT_INITIALIZED -> {
+        when (state) {
+            is HubConnectionState.Uninitialized -> {
                 binding.statusText.text = "Initializing..."
                 binding.tabContainer.visibility = View.GONE
                 binding.progressBar.visibility = View.VISIBLE
+                binding.errorText.visibility = View.GONE
+                binding.loginButton.isEnabled = false
             }
 
-            ConnectionState.NO_SELECTION -> {
-                val hasSavedAccounts = state.accountList?.accounts?.isNotEmpty() == true
+            is HubConnectionState.WaitingForLogin -> {
+                binding.loginButton.isEnabled = true
 
+                // Show error if present
+                state.connectionError?.let { error ->
+                    binding.errorText.text = error
+                    binding.errorText.visibility = View.VISIBLE
+                } ?: run {
+                    binding.errorText.visibility = View.GONE
+                }
+
+                val hasSavedAccounts = state.accountList?.accounts?.isNotEmpty() == true
                 if (hasSavedAccounts) {
                     binding.statusText.text = "Select an account to connect"
                     binding.tabContainer.visibility = View.VISIBLE
@@ -238,36 +244,20 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
 
-            ConnectionState.LOGIN -> {
-                binding.statusText.text = "Please log in"
-                binding.tabContainer.visibility = View.VISIBLE
-                binding.progressBar.visibility = View.GONE
-                binding.loginButton.isEnabled = true
-
-                // Show new account tab for login
-                binding.tabLayout.selectTab(binding.tabLayout.getTabAt(1))
-                showNewAccountTab()
-            }
-
-            ConnectionState.CONNECTING -> {
+            is HubConnectionState.Connecting -> {
                 binding.statusText.text = "Connecting..."
                 binding.tabContainer.visibility = View.VISIBLE
                 binding.progressBar.visibility = View.VISIBLE
                 binding.loginButton.isEnabled = false
+                binding.errorText.visibility = View.GONE
             }
 
-            ConnectionState.CONNECTED -> {
+            is HubConnectionState.Connected -> {
                 binding.statusText.text = "Connected successfully!"
                 binding.progressBar.visibility = View.GONE
+                binding.errorText.visibility = View.GONE
             }
         }
 
-        // Show error if present
-        state.connectionError?.let { error ->
-            binding.errorText.text = error
-            binding.errorText.visibility = View.VISIBLE
-        } ?: run {
-            binding.errorText.visibility = View.GONE
-        }
     }
 }

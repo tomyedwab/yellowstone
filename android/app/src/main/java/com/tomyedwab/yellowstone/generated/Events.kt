@@ -15,16 +15,17 @@ class Events(
 ) {
 
     /**
-     * Event to update a task's title
+     * Event to move tasks from one list to another
      */
-    fun taskUpdateTitle(taskId: Int, title: String) {
+    fun taskListMoveTasks(newListId: Int, oldListId: Int, taskIds: List<Int>) {
         val event = PendingEvent(
             clientId = UUID.randomUUID().toString(),
-            type = "Task:UpdateTitle",
+            type = "TaskList:MoveTasks",
             timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
             data = mapOf(
-                "TaskId" to taskId,
-                "Title" to title
+                "NewListId" to newListId,
+                "OldListId" to oldListId,
+                "TaskIds" to taskIds
             )
         )
         connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
@@ -41,6 +42,80 @@ class Events(
                 "AfterTaskId" to afterTaskId,
                 "OldTaskId" to oldTaskId,
                 "TaskListId" to taskListId
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to update a task's title
+     */
+    fun taskUpdateTitle(taskId: Int, title: String) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "Task:UpdateTitle",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "TaskId" to taskId,
+                "Title" to title
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to update a task's completion status
+     */
+    fun taskUpdateCompleted(completedAt: String?, taskId: Int) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "Task:UpdateCompleted",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "CompletedAt" to completedAt,
+                "TaskId" to taskId
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to update a task's due date
+     */
+    fun taskUpdateDueDate(dueDate: String?, taskId: Int) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "Task:UpdateDueDate",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "DueDate" to dueDate,
+                "TaskId" to taskId
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to delete a task
+     */
+    fun taskDelete(taskId: Int) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "Task:Delete",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "TaskId" to taskId
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to add a task to a task list
+     */
+    fun taskListAddTask(listId: Int, taskId: Int) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "TaskList:AddTask",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "ListId" to listId,
+                "TaskId" to taskId
             )
         )
         connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
@@ -77,127 +152,6 @@ class Events(
         connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
     }
     /**
-     * Event to delete a task
-     */
-    fun taskDelete(taskId: Int) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "Task:Delete",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "TaskId" to taskId
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to add a new task list
-     */
-    fun taskListAdd(archived: Boolean, category: String, title: String) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "TaskList:Add",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "Archived" to archived,
-                "Category" to category,
-                "Title" to title
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to add a task to a task list
-     */
-    fun taskListAddTask(listId: Int, taskId: Int) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "TaskList:AddTask",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "ListId" to listId,
-                "TaskId" to taskId
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to update a task's completion status
-     */
-    fun taskUpdateCompleted(completedAt: String?, taskId: Int) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "Task:UpdateCompleted",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "CompletedAt" to completedAt,
-                "TaskId" to taskId
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to update a task list's title
-     */
-    fun taskListUpdateTitle(listId: Int, title: String) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "TaskList:UpdateTitle",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "ListId" to listId,
-                "Title" to title
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to move tasks from one list to another
-     */
-    fun taskListMoveTasks(newListId: Int, oldListId: Int, taskIds: List<Int>) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "TaskList:MoveTasks",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "NewListId" to newListId,
-                "OldListId" to oldListId,
-                "TaskIds" to taskIds
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to copy tasks to another list
-     */
-    fun taskListCopyTasks(newListId: Int, taskIds: List<Int>) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "TaskList:CopyTasks",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "NewListId" to newListId,
-                "TaskIds" to taskIds
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
-     * Event to update a task's due date
-     */
-    fun taskUpdateDueDate(dueDate: String?, taskId: Int) {
-        val event = PendingEvent(
-            clientId = UUID.randomUUID().toString(),
-            type = "Task:UpdateDueDate",
-            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
-            data = mapOf(
-                "DueDate" to dueDate,
-                "TaskId" to taskId
-            )
-        )
-        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
-    }
-    /**
      * Event to add a user comment to a task
      */
     fun taskAddComment(taskId: Int, userComment: String) {
@@ -223,6 +177,52 @@ class Events(
             data = mapOf(
                 "Archived" to archived,
                 "ListId" to listId
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to copy tasks to another list
+     */
+    fun taskListCopyTasks(newListId: Int, taskIds: List<Int>) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "TaskList:CopyTasks",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "NewListId" to newListId,
+                "TaskIds" to taskIds
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to add a new task list
+     */
+    fun taskListAdd(archived: Boolean, category: String, title: String) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "TaskList:Add",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "Archived" to archived,
+                "Category" to category,
+                "Title" to title
+            )
+        )
+        connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))
+    }
+    /**
+     * Event to update a task list's title
+     */
+    fun taskListUpdateTitle(listId: Int, title: String) {
+        val event = PendingEvent(
+            clientId = UUID.randomUUID().toString(),
+            type = "TaskList:UpdateTitle",
+            timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date()),
+            data = mapOf(
+                "ListId" to listId,
+                "Title" to title
             )
         )
         connectionStateProvider.dispatch(ConnectionAction.PublishEvent(event))

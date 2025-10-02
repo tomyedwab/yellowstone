@@ -3,7 +3,6 @@ package com.tomyedwab.yellowstone.provider.storage
 import android.content.Context
 import androidx.lifecycle.Observer
 import com.tomyedwab.yellowstone.provider.connection.ConnectionAction
-import com.tomyedwab.yellowstone.provider.connection.ConnectionState
 import com.tomyedwab.yellowstone.provider.connection.ConnectionStateProvider
 import com.tomyedwab.yellowstone.provider.connection.HubConnectionState
 
@@ -43,26 +42,15 @@ class ConnectionStorageConnector(
     }
 
     private fun handleStateChange(state: HubConnectionState) {
-        when {
-            isStartingLogin(state) -> {
+        when (state) {
+            is HubConnectionState.Connecting.LoggingIn -> {
                 clearSelectionOnLoginStart(state)
             }
-            isSuccessfullyConnected(state) -> {
+            is HubConnectionState.Connected -> {
                 saveSuccessfulConnection(state)
             }
+            else -> {}
         }
-    }
-
-    private fun isStartingLogin(state: HubConnectionState): Boolean {
-        return state.state == ConnectionState.CONNECTING &&
-               state.loginPassword != null &&
-               state.loginAccount != null
-    }
-
-    private fun isSuccessfullyConnected(state: HubConnectionState): Boolean {
-        return state.state == ConnectionState.CONNECTED &&
-               state.loginAccount != null &&
-               state.refreshToken != null
     }
 
     private fun clearSelectionOnLoginStart(state: HubConnectionState) {
@@ -72,14 +60,11 @@ class ConnectionStorageConnector(
         }
     }
 
-    private fun saveSuccessfulConnection(state: HubConnectionState) {
-        val loginAccount = state.loginAccount ?: return
-        val refreshToken = state.refreshToken ?: return
-
+    private fun saveSuccessfulConnection(state: HubConnectionState.Connected) {
         val savedAccount = storageProvider.saveHubAccount(
-            hubUrl = loginAccount.url,
-            username = loginAccount.name,
-            refreshToken = refreshToken
+            hubUrl = state.loginAccount.url,
+            username = state.loginAccount.name,
+            refreshToken = state.refreshToken
         )
     }
 }

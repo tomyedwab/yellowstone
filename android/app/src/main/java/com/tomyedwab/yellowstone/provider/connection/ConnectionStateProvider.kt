@@ -9,8 +9,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-class ConnectionStateProvider : ViewModel() {
-    private val _connectionState = MutableLiveData(HubConnectionState())
+interface StateDispatcher {
+    fun dispatch(action: ConnectionAction)
+}
+
+class ConnectionStateProvider : ViewModel(), StateDispatcher {
+    private val _connectionState: MutableLiveData<HubConnectionState> = MutableLiveData(HubConnectionState.Uninitialized())
     val connectionState: LiveData<HubConnectionState> = _connectionState
     private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -19,8 +23,8 @@ class ConnectionStateProvider : ViewModel() {
         mainScope.cancel()
     }
 
-    fun dispatch(action: ConnectionAction) {
-        val currentState = _connectionState.value ?: HubConnectionState()
+    override fun dispatch(action: ConnectionAction) {
+        val currentState = _connectionState.value ?: HubConnectionState.Uninitialized()
         val newState = connectionStateReducer(currentState, action)
 
         // Ensure we're on the main thread when updating LiveData
@@ -39,104 +43,257 @@ class ConnectionStateProvider : ViewModel() {
     ): HubConnectionState {
         return when (action) {
             is ConnectionAction.AccountListLoaded -> {
-                state.copy(
-                    accountList = action.accountList,
-                    state = if (action.accountList.accounts.isNotEmpty()) {
-                        ConnectionState.NO_SELECTION
-                    } else {
-                        ConnectionState.LOGIN
-                    },
-                    loginAccount = null,
-                    loginPassword = null,
-                    refreshToken = null,
-                    accessToken = null,
-                    backendComponentIDs = null,
-                    backendEventIDs = null,
-                    connectionError = null,
-                    pendingEvents = emptyList()
-                )
+                HubConnectionState.WaitingForLogin(action.accountList, action.accountList.accounts.find { account ->
+                    account.id == action.accountList.selectedAccount
+                })
             }
 
             is ConnectionAction.ConnectionSelected -> {
-                val accountList = state.accountList ?: return state
-                val nextAccount = accountList.accounts.find { account ->
+                val nextAccount = state.accountList.accounts.find { account ->
                     account.id == action.selectedAccount
                 } ?: return state
-
-                state.copy(
-                    accountList = accountList.copy(selectedAccount = action.selectedAccount),
-                    state = ConnectionState.CONNECTING,
-                    loginAccount = nextAccount,
-                    refreshToken = nextAccount.refreshToken,
-                    accessToken = null,
-                )
+                if (nextAccount.refreshToken != null) {
+                    // Try to log in immediately
+                    HubConnectionState.Connecting.RefreshingAccessToken(
+                        state.accountList,
+                        nextAccount,
+                        null,
+                        nextAccount.refreshToken
+                    )
+                } else {
+                    // User needs to enter password
+                    HubConnectionState.WaitingForLogin(state.accountList, nextAccount)
+                }
             }
 
             is ConnectionAction.StartLogin -> {
-                state.copy(
-                    state = ConnectionState.CONNECTING,
-                    loginAccount = action.account,
-                    loginPassword = action.password,
-                    refreshToken = null,
-                    accessToken = null,
-                    backendComponentIDs = null,
-                    backendEventIDs = null,
-                    connectionError = null,
-                    pendingEvents = emptyList()
+                HubConnectionState.Connecting.LoggingIn(
+                    state.accountList,
+                    action.account,
+                    action.password
                 )
             }
 
             is ConnectionAction.StartConnection -> {
-                state.copy(
-                    state = ConnectionState.CONNECTING,
-                    loginAccount = action.account,
-                    loginPassword = null,
-                    refreshToken = action.refreshToken
-                )
+                when (state) {
+                    is HubConnectionState.Connecting.LoggingIn -> {
+                        HubConnectionState.Connecting.RefreshingAccessToken(
+                            state.accountList,
+                            action.account,
+                            state.loginPassword,
+                            action.refreshToken
+                        )
+                    }
+
+                    is HubConnectionState.Connecting -> {
+                        // Retain password while we are trying to connect
+                        HubConnectionState.Connecting.RefreshingAccessToken(
+                            state.accountList,
+                            action.account,
+                            state.loginPassword,
+                            action.refreshToken,
+                        )
+                    }
+
+                    else -> {
+                        HubConnectionState.Connecting.RefreshingAccessToken(
+                            state.accountList,
+                            action.account,
+                            null,
+                            action.refreshToken
+                        )
+                    }
+                }
             }
 
-            is ConnectionAction.ReceivedAccessToken -> {
-                state.copy(
-                    accessToken = action.accessToken,
-                    refreshToken = action.refreshToken
-                )
+            is ConnectionAction.RefreshTokenInvalid -> {
+                 when (state) {
+                    is HubConnectionState.Connecting.RefreshingAccessToken -> {
+                        // If the refresh token was invalidated for some reason,
+                        // we will discover it when we try to refresh the access
+                        // token. In this case, fall back to login screen,
+                        // clearing the invalid token
+                        HubConnectionState.WaitingForLogin(
+                            HubAccountList(
+                                state.accountList.accounts.map {
+                                    if (it.id == state.loginAccount.id) {
+                                        it.copy(refreshToken = null)
+                                    } else {
+                                        it
+                                    }
+                                },
+                                state.accountList.selectedAccount,
+                            ),
+                            state.loginAccount
+                        )
+                    }
+                    // There is no other case where this is expected to happen
+                    else -> state
+                }
             }
 
             is ConnectionAction.AccessTokenRevoked -> {
-                state.copy(
-                    state = ConnectionState.CONNECTING,
-                    accessToken = null,
-                )
+                when (state) {
+                    is HubConnectionState.Connecting.RegisteringAppComponents -> {
+                        HubConnectionState.Connecting.RefreshingAccessToken(
+                            state.accountList,
+                            state.loginAccount,
+                            state.loginPassword,
+                            state.refreshToken
+                        )
+                    }
+
+                    is HubConnectionState.Connecting.InitialConnection -> {
+                        HubConnectionState.Connecting.RefreshingAccessToken(
+                            state.accountList,
+                            state.loginAccount,
+                            state.loginPassword,
+                            state.refreshToken
+                        )
+                    }
+
+                    is HubConnectionState.Connected -> {
+                        HubConnectionState.Connecting.RefreshingAccessToken(
+                            state.accountList,
+                            state.loginAccount,
+                            null,
+                            state.refreshToken
+                        )
+                    }
+
+                    // Not sure how this happened, but just fall back to login screen
+                    else -> HubConnectionState.WaitingForLogin(state.accountList, null)
+                }
+            }
+
+            is ConnectionAction.ReceivedAccessToken -> {
+                when (state) {
+                    is HubConnectionState.Connecting.RefreshingAccessToken -> {
+                        HubConnectionState.Connecting.RegisteringAppComponents(
+                            state.accountList,
+                            state.loginAccount,
+                            state.loginPassword,
+                            action.refreshToken,
+                            action.accessToken
+                        )
+                    }
+
+                    // This event only makes sense in this one particular state
+                    else ->  state
+                }
             }
 
             is ConnectionAction.MappedComponentIDs -> {
-                state.copy(backendComponentIDs = action.componentIDs)
+                when (state) {
+                    is HubConnectionState.Connecting.RegisteringAppComponents -> {
+                        HubConnectionState.Connecting.InitialConnection(
+                            state.accountList,
+                            state.loginAccount,
+                            state.loginPassword,
+                            state.refreshToken,
+                            state.accessToken,
+                            action.componentIDs
+                        )
+                    }
+
+                    // This is an invalid transition so do nothing
+                    else -> state
+                }
             }
 
             is ConnectionAction.ConnectionFailed -> {
-                state.copy(
-                    state = ConnectionState.LOGIN,
-                    connectionError = action.error
-                )
+                when (state) {
+                    is HubConnectionState.Connecting -> {
+                        HubConnectionState.WaitingForLogin(
+                            state.accountList,
+                            state.loginAccount,
+                            state.loginPassword,
+                            action.error
+                        )
+                    }
+
+                    is HubConnectionState.Connected -> {
+                        HubConnectionState.WaitingForLogin(
+                            state.accountList,
+                            state.loginAccount,
+                            null,
+                            action.error
+                        )
+                    }
+
+                    // If we're not connecting or connected, then the connection can't fail
+                    else -> state
+                }
             }
 
             is ConnectionAction.ConnectionSucceeded -> {
-                state.copy(
-                    state = ConnectionState.CONNECTED,
-                    backendEventIDs = action.eventIDs
-                )
+                when (state) {
+                    is HubConnectionState.Connecting.InitialConnection -> {
+                        HubConnectionState.Connected(
+                            state.accountList,
+                            state.loginAccount,
+                            state.refreshToken,
+                            state.accessToken,
+                            state.backendComponentIDs,
+                            action.eventIDs,
+                            emptyList() // pendingEvents
+                        )
+                    }
+
+                    // This event only makes sense following InitialConnection
+                    else -> state
+                }
             }
 
             is ConnectionAction.EventsUpdated -> {
-                state.copy(backendEventIDs = action.eventIDs)
+                when (state) {
+                    is HubConnectionState.Connected -> {
+                        HubConnectionState.Connected(
+                            state.accountList,
+                            state.loginAccount,
+                            state.refreshToken,
+                            state.accessToken,
+                            state.backendComponentIDs,
+                            action.eventIDs,
+                            state.pendingEvents,
+                        )
+                    }
+                    else -> state
+                }
             }
 
             is ConnectionAction.PublishEvent -> {
-                state.copy(pendingEvents = state.pendingEvents + action.event)
+                when (state) {
+                    is HubConnectionState.Connected -> {
+                        HubConnectionState.Connected(
+                            state.accountList,
+                            state.loginAccount,
+                            state.refreshToken,
+                            state.accessToken,
+                            state.backendComponentIDs,
+                            state.backendEventIDs,
+                            state.pendingEvents + action.event,
+                        )
+                    }
+                    else -> state
+                }
             }
 
             is ConnectionAction.EventPublished -> {
-                state.copy(pendingEvents = state.pendingEvents.filterNot { it.clientId == action.clientId })
+                when (state) {
+                    is HubConnectionState.Connected -> {
+                        HubConnectionState.Connected(
+                            state.accountList,
+                            state.loginAccount,
+                            state.refreshToken,
+                            state.accessToken,
+                            state.backendComponentIDs,
+                            state.backendEventIDs,
+                            state.pendingEvents.filterNot { it.clientId == action.clientId },
+                        )
+                    }
+                    else -> state
+                }
             }
         }
     }
