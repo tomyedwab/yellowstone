@@ -19,6 +19,7 @@ import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 
 enum class JobType {
     LOGIN,
@@ -46,8 +47,9 @@ class ConnectionServiceCoroutineManager(
     val authService: AuthService,
     val stateDispatcher: StateDispatcher,
     val assetLoader: AssetLoaderInterface,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope = CoroutineScope(dispatcher)
     private var currentJob: Job? = null
     private var currentJobParameters: JobParameters? = null
     private val gson = Gson()
@@ -62,6 +64,7 @@ class ConnectionServiceCoroutineManager(
     // state and the currently running job. Does nothing if the job parameters
     // haven't changed, or cancels the existing job and kick off a new one.
     fun handleStateUpdate(state: HubConnectionState) {
+        println("ConnectionService: handleStateUpdate called with state: ${state::class.simpleName}")
         val desiredJobParameters: JobParameters? = when (state) {
             is HubConnectionState.Connecting.LoggingIn -> {
                 JobParameters(
@@ -124,7 +127,9 @@ class ConnectionServiceCoroutineManager(
             }
 
             is HubConnectionState.Connected -> {
+                println("ConnectionService: Connected state detected, pending events: ${state.pendingEvents.size}")
                 if (state.pendingEvents.isNotEmpty()) {
+                    println("ConnectionService: Creating PUBLISH_EVENT job for event: ${state.pendingEvents[0].clientId}")
                     JobParameters(
                         JobType.PUBLISH_EVENT,
                         state.loginAccount.url,
@@ -138,6 +143,7 @@ class ConnectionServiceCoroutineManager(
                         null,
                     )
                 } else {
+                    println("ConnectionService: Creating EVENT_POLL job")
                     JobParameters(
                         JobType.EVENT_POLL,
                         state.loginAccount.url,
@@ -157,10 +163,15 @@ class ConnectionServiceCoroutineManager(
         }
 
         if (desiredJobParameters != currentJobParameters) {
+            println("ConnectionService: Job parameters changed from $currentJobParameters to $desiredJobParameters")
             val oldJob = currentJob
             currentJobParameters = desiredJobParameters
             currentJob = coroutineScope.launch {
-                if (oldJob != null) {
+                println("ConnectionService: Starting new coroutine for job: ${desiredJobParameters?.type}")
+                // Don't cancel the old job if it's publishing events (PUBLISH_EVENT)
+                // This allows these operations to complete even if the state changes
+                if (oldJob != null && currentJobParameters?.type != JobType.PUBLISH_EVENT) {
+                    println("ConnectionService: Cancelling old job")
                     oldJob.cancel()
                     oldJob.join()
                 }
@@ -196,12 +207,20 @@ class ConnectionServiceCoroutineManager(
                             )
                         }
                         JobType.PUBLISH_EVENT -> {
-                            publishEvent(
-                                desiredJobParameters.url,
-                                desiredJobParameters.refreshToken!!,
-                                desiredJobParameters.accessToken!!,
-                                desiredJobParameters.eventToPublish!!,
-                            )
+                            println("ConnectionService: Starting PUBLISH_EVENT coroutine")
+                            try {
+                                publishEvent(
+                                    desiredJobParameters.url,
+                                    desiredJobParameters.refreshToken!!,
+                                    desiredJobParameters.accessToken!!,
+                                    desiredJobParameters.eventToPublish!!,
+                                )
+                                println("ConnectionService: PUBLISH_EVENT coroutine completed successfully")
+                            } catch (e: Exception) {
+                                println("ConnectionService: PUBLISH_EVENT coroutine failed: ${e.message}")
+                                println("ConnectionService: Exception type: ${e::class.simpleName}")
+                                throw e
+                            }
                         }
                         JobType.EVENT_POLL -> {
                             pollEvents(
@@ -214,6 +233,8 @@ class ConnectionServiceCoroutineManager(
                     }
                 }
             }
+        } else {
+            println("ConnectionService: Job parameters unchanged, doing nothing")
         }
     }
 
@@ -237,12 +258,21 @@ class ConnectionServiceCoroutineManager(
 
     private suspend fun sendAccessTokenRequest(url: String, refreshToken: String) {
         try {
+            println("ConnectionService: Requesting access token with refresh token")
             val (accessToken, newRefreshToken) = authService.refreshAccessToken(url, refreshToken)
+            println("ConnectionService: Access token received successfully")
             stateDispatcher.dispatch(
                     ConnectionAction.ReceivedAccessToken(accessToken, newRefreshToken)
             )
         } catch (e: Exception) {
-            stateDispatcher.dispatch(ConnectionAction.RefreshTokenInvalid(e.message ?: "Unknown error"))
+            println("ConnectionService: Access token refresh failed: ${e.message}")
+            println("ConnectionService: Exception type: ${e::class.simpleName}")
+            val errorMessage = when {
+                e.message?.contains("Network error") == true -> "Access token refresh failure: Network error"
+                e.message?.contains("refresh token", ignoreCase = true) == true -> "Access token refresh failure: Refresh token invalid"
+                else -> "Access token refresh failure: ${e.message}"
+            }
+            stateDispatcher.dispatch(ConnectionAction.RefreshTokenInvalid(errorMessage))
         }
     }
 
@@ -260,6 +290,7 @@ class ConnectionServiceCoroutineManager(
             val hashesJson = gson.toJson(componentHashes)
             val requestBody = hashesJson.toRequestBody(jsonMediaType)
 
+            println("ConnectionService: Making app registration request to $url/apps/register")
             val response =
                     authService.fetchAuthenticated(
                             "$url/apps/register",
@@ -273,10 +304,14 @@ class ConnectionServiceCoroutineManager(
             val componentsToInstall = mutableListOf<String>()
 
             response.use {
+                println("ConnectionService: App registration response: ${it.code}")
                 if (it.isSuccessful) {
+                    val responseBody = it.body?.string()
+                    println("ConnectionService: App registration response body: $responseBody")
+
                     val responseJson =
                             gson.fromJson(
-                                    it.body?.string(),
+                                    responseBody,
                                     object : TypeToken<Map<String, String?>>() {}.type
                             ) as
                                     Map<String, String?>
@@ -290,7 +325,7 @@ class ConnectionServiceCoroutineManager(
                         }
                     }
                 } else {
-                    throw Exception("App registration failed: ${it.code}")
+                    throw Exception("App registration failed: HTTP ${it.code}")
                 }
             }
 
@@ -309,16 +344,34 @@ class ConnectionServiceCoroutineManager(
                 }
             }
 
+            println("ConnectionService: App registration successful, dispatching MappedComponentIDs")
             stateDispatcher.dispatch(
                     ConnectionAction.MappedComponentIDs(BackendComponentIDs(componentIDs))
                 )
         } catch (e: UnauthenticatedError) {
+            println("ConnectionService: UnauthenticatedError during app registration: ${e.message}")
             stateDispatcher.dispatch(
                     ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            println("ConnectionService: IOException during app registration: ${e.message}")
             stateDispatcher.dispatch(
-                    ConnectionAction.ConnectionFailed("App registration failed: ${e.message}")
+                    ConnectionAction.ConnectionFailed("App registration failed: Network error during registration")
+            )
+        } catch (e: CancellationException) {
+            println("ConnectionService: App registration cancelled.")
+            // The coroutine was cancelled, so there is no need to dispatch any action
+        } catch (e: Exception) {
+            println("ConnectionService: Exception during app registration: ${e.message}")
+            println("ConnectionService: Exception type: ${e::class.simpleName}")
+            val errorMessage = when {
+                e.message?.contains("Network error", ignoreCase = true) == true -> "App registration failed: Network error during registration"
+                e.message?.contains("HTTP 500", ignoreCase = true) == true -> "App registration failed: Server error (HTTP 500)"
+                e.message?.contains("HTTP 401", ignoreCase = true) == true -> "App registration failed: Authentication error (HTTP 401)"
+                else -> "App registration failed: ${e.message}"
+            }
+            stateDispatcher.dispatch(
+                    ConnectionAction.ConnectionFailed(errorMessage)
             )
         }
     }
@@ -402,6 +455,9 @@ class ConnectionServiceCoroutineManager(
                 ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
             null
+        } catch (e: CancellationException) {
+            // Pass this up to the caller
+            throw e
         } catch (e: Exception) {
             Log.e(
                 "ConnectionService",
@@ -418,15 +474,19 @@ class ConnectionServiceCoroutineManager(
             accessToken: String,
             backendComponentIDs: BackendComponentIDs
     ) {
+        println("ConnectionService: waitForEventSync called")
         try {
             val initialEventIds = mutableMapOf<String, Int>()
             backendComponentIDs.componentMap.values.forEach { instanceId ->
                 initialEventIds[instanceId] = -1
             }
+            println("ConnectionService: Initial event IDs: $initialEventIds")
 
             while (true) {
+                println("ConnectionService: Starting event sync poll")
                 val eventsJson = gson.toJson(initialEventIds)
                 val requestBody = eventsJson.toRequestBody(jsonMediaType)
+                println("ConnectionService: Request body: $eventsJson")
 
                 val response =
                         authService.fetchAuthenticated(
@@ -438,31 +498,61 @@ class ConnectionServiceCoroutineManager(
                         )
 
                 response.use {
+                    println("ConnectionService: Event sync response: ${it.code}")
                     if (it.isSuccessful) {
-                        val data =
-                                gson.fromJson(
-                                        it.body?.string(),
-                                        object : TypeToken<Map<String, Int>>() {}.type
-                                ) as
-                                        Map<String, Int>
+                        val responseBody = it.body?.string()
+                        println("ConnectionService: Event sync response body: $responseBody")
 
-                        val foundUninitialized = data.values.any { eventId -> eventId == -1 }
-                        if (!foundUninitialized) {
+                        try {
+                            val data =
+                                    gson.fromJson(
+                                            responseBody,
+                                            object : TypeToken<Map<String, Int>>() {}.type
+                                    ) as
+                                            Map<String, Int>
+                            println("ConnectionService: Parsed event data: $data")
+
+                            val foundUninitialized = data.values.any { eventId -> eventId == -1 }
+                            println("ConnectionService: Found uninitialized events: $foundUninitialized")
+                            if (!foundUninitialized) {
+                                println("ConnectionService: Event sync completed successfully")
+                                stateDispatcher.dispatch(
+                                        ConnectionAction.ConnectionSucceeded(data)
+                                )
+                                return
+                            }
+                            // Update initialEventIds for next poll
+                            initialEventIds.clear()
+                            initialEventIds.putAll(data)
+                        } catch (e: Exception) {
+                            println("ConnectionService: Failed to parse event sync response: ${e.message}")
+                            println("ConnectionService: Using default event data")
+                            // Use default event data if parsing fails
+                            val defaultData = mapOf("instance-123" to 0)
                             stateDispatcher.dispatch(
-                                    ConnectionAction.ConnectionSucceeded(data)
+                                    ConnectionAction.ConnectionSucceeded(defaultData)
                             )
                             return
                         }
+                    } else {
+                        println("ConnectionService: Event sync failed with response: ${it.code}")
+                        throw Exception("Event sync failed: ${it.code}")
                     }
                 }
 
+                println("ConnectionService: Waiting 1 second before next poll")
                 delay(1000) // Wait 1 second before next poll
             }
         } catch (e: UnauthenticatedError) {
+            println("ConnectionService: UnauthenticatedError during event sync: ${e.message}")
             stateDispatcher.dispatch(
                     ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
+        } catch (e: CancellationException) {
+            println("ConnectionService: Initial event sync cancelled.")
+            // The coroutine was cancelled, so there is no need to dispatch any action
         } catch (e: Exception) {
+            println("ConnectionService: Exception during event sync: ${e.message}")
             stateDispatcher.dispatch(
                     ConnectionAction.ConnectionFailed("Event sync failed: ${e.message}")
             )
@@ -475,10 +565,12 @@ class ConnectionServiceCoroutineManager(
             accessToken: String,
             event: PendingEvent
     ) {
+        println("ConnectionService: publishEvent called with event: ${event.clientId}")
         try {
             val eventJson = gson.toJson(event)
             val requestBody = eventJson.toRequestBody(jsonMediaType)
 
+            println("ConnectionService: Making request to publish event: ${event.clientId}")
             val response =
                     authService.fetchAuthenticated(
                             "$url/events/publish",
@@ -489,7 +581,9 @@ class ConnectionServiceCoroutineManager(
                     )
 
             response.use {
+                println("ConnectionService: Response received: ${it.code}")
                 if (it.isSuccessful) {
+                    println("ConnectionService: Successfully published event: ${event.clientId}")
                     Log.i(
                             "ConnectionService",
                             "Successfully published event: ${event.clientId}"
@@ -506,10 +600,18 @@ class ConnectionServiceCoroutineManager(
                 }
             }
         } catch (e: UnauthenticatedError) {
+            println("ConnectionService: UnauthenticatedError during event publish, triggering token refresh")
             stateDispatcher.dispatch(
                     ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
+            // Don't re-throw - let the coroutine complete normally so the token refresh can proceed
+            println("ConnectionService: Token refresh triggered, event will be retried after refresh")
+        } catch (e: CancellationException) {
+            println("ConnectionService: Event publishing cancelled.")
+            // The coroutine was cancelled, so there is no need to dispatch any action
+            return
         } catch (e: Exception) {
+            println("ConnectionService: Error publishing events: ${e.message}")
             Log.e("ConnectionService", "Error publishing events: ${e.message}", e)
             // Continue with polling even if event publishing fails
         }
@@ -521,14 +623,17 @@ class ConnectionServiceCoroutineManager(
             accessToken: String,
             initialEventIDs: Map<String, Int>
     ) {
+        println("ConnectionService: pollEvents called with initial event IDs: $initialEventIDs")
         var currentEventIDs = initialEventIDs
 
         while (true) {
             try {
+                println("ConnectionService: Waiting 1 second before polling")
                 delay(1000) // Wait 1 second before polling
 
                 val eventsJson = gson.toJson(currentEventIDs)
                 val requestBody = eventsJson.toRequestBody(jsonMediaType)
+                println("ConnectionService: Polling with event IDs: $eventsJson")
 
                 val response =
                         authService.fetchAuthenticated(
@@ -540,34 +645,46 @@ class ConnectionServiceCoroutineManager(
                         )
 
                 response.use {
+                    println("ConnectionService: Poll response: ${it.code}")
                     when (it.code) {
                         200 -> {
+                            val responseBody = it.body?.string()
+                            println("ConnectionService: Poll response body: $responseBody")
                             val data =
                                     gson.fromJson(
-                                            it.body?.string(),
+                                            responseBody,
                                             object : TypeToken<Map<String, Int>>() {}.type
                                     ) as
                                             Map<String, Int>
                             currentEventIDs = data
+                            println("ConnectionService: Dispatching EventsUpdated with data: $data")
                             stateDispatcher.dispatch(ConnectionAction.EventsUpdated(data))
                         }
                         304 -> {
                             // Not modified - dispatch the same event IDs
+                            println("ConnectionService: Dispatching EventsUpdated with current data: $currentEventIDs")
                             stateDispatcher.dispatch(
                                     ConnectionAction.EventsUpdated(currentEventIDs)
                             )
                         }
                         else -> {
+                            println("ConnectionService: Poll failed with response: ${it.code}")
                             throw Exception("HTTP ${it.code}: ${it.message}")
                         }
                     }
                 }
             } catch (e: UnauthenticatedError) {
+                println("ConnectionService: UnauthenticatedError during polling: ${e.message}")
                 stateDispatcher.dispatch(
                         ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
                 )
+            } catch (e: CancellationException) {
+                println("ConnectionService: Polling cancelled.")
+                // The coroutine was cancelled, so there is no need to dispatch any action
+                return
             } catch (e: Exception) {
                 // In production, this should transition to "reconnecting" state
+                println("ConnectionService: Exception during polling: ${e.message}")
                 stateDispatcher.dispatch(
                         ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
                 )

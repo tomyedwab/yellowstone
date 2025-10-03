@@ -53,7 +53,9 @@ sealed class HubConnectionState(val accountList: HubAccountList) {
             accountList: HubAccountList,
             loginAccount: HubAccount,
             loginPassword: String?,
-            val refreshToken: String
+            val refreshToken: String,
+            val backendComponentIDs: BackendComponentIDs? = null,
+            val backendEventIDs: Map<String, Int>? = null
         ) : Connecting(accountList, loginAccount, loginPassword)
 
         // We need to check that all the components are registered

@@ -2,6 +2,7 @@ package com.tomyedwab.yellowstone.services.connection
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
@@ -16,7 +17,10 @@ import javax.net.ssl.X509TrustManager
 
 class UnauthenticatedError(message: String) : Exception(message)
 
-class AuthService(private val allowInsecureConnections: Boolean = false) {
+class AuthService(
+    private val allowInsecureConnections: Boolean = false,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
     private val client = createOkHttpClient()
     private val gson = Gson()
     private val jsonMediaType = "application/json".toMediaType()
@@ -63,7 +67,7 @@ class AuthService(private val allowInsecureConnections: Boolean = false) {
     }
 
     suspend fun doLogin(url: String, username: String, password: String): String {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatcher) {
             val loginData = JsonObject().apply {
                 addProperty("username", username)
                 addProperty("password", password)
@@ -88,7 +92,7 @@ class AuthService(private val allowInsecureConnections: Boolean = false) {
     }
 
     suspend fun refreshAccessToken(url: String, refreshToken: String): Pair<String, String> {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatcher) {
             val request = Request.Builder()
                 .url("$url/public/access_token")
                 .post("".toRequestBody())
@@ -96,17 +100,29 @@ class AuthService(private val allowInsecureConnections: Boolean = false) {
                 .addHeader("Cookie", "YRT=$refreshToken")
                 .build()
 
-            val response = client.newCall(request).execute()
-            response.use {
-                if (it.isSuccessful) {
-                    val responseData = gson.fromJson(it.body?.string(), JsonObject::class.java)
-                    val accessToken = responseData.get("access_token")?.asString
-                    val newRefreshToken = getRefreshTokenFromCookie(it)
-                    if (accessToken != null) {
-                        return@withContext accessToken to newRefreshToken
+            try {
+                val response = client.newCall(request).execute()
+                response.use {
+                    if (it.isSuccessful) {
+                        val responseData = gson.fromJson(it.body?.string(), JsonObject::class.java)
+                        val accessToken = responseData.get("access_token")?.asString
+                        val newRefreshToken = getRefreshTokenFromCookie(it)
+                        if (accessToken != null) {
+                            return@withContext accessToken to newRefreshToken
+                        } else {
+                            throw UnauthenticatedError("Malformed response: missing access_token field")
+                        }
+                    } else if (it.code == 401) {
+                        // Refresh token is invalid
+                        throw UnauthenticatedError("Refresh token invalid: HTTP 401")
+                    } else {
+                        throw UnauthenticatedError("Failed to refresh token: HTTP ${it.code} - ${it.message}")
                     }
                 }
-                throw UnauthenticatedError("Failed to refresh token: " + response.body?.string())
+            } catch (e: IOException) {
+                throw UnauthenticatedError("Network error during access token refresh: ${e.message}")
+            } catch (e: Exception) {
+                throw UnauthenticatedError("Access token refresh failed: ${e.message}")
             }
         }
     }
@@ -119,7 +135,7 @@ class AuthService(private val allowInsecureConnections: Boolean = false) {
         body: RequestBody? = null,
         headers: Map<String, String> = emptyMap()
     ): Response {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatcher) {
             var currentAccessToken = accessToken
 
             // If no access token, refresh it first
@@ -142,10 +158,13 @@ class AuthService(private val allowInsecureConnections: Boolean = false) {
                 else -> requestBuilder.get()
             }
 
+            println("AuthService: Making request to $url with method $method")
             var response = client.newCall(requestBuilder.build()).execute()
+            println("AuthService: Received response: ${response.code}")
 
             // If unauthorized, raise exception to clear the access token & re-auth
             if (response.code == 401) {
+                println("AuthService: Got 401 response, throwing UnauthenticatedError")
                 throw UnauthenticatedError("Invalid access token")
             }
 

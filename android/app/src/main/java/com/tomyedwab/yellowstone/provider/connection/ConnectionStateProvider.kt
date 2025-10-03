@@ -25,7 +25,9 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
 
     override fun dispatch(action: ConnectionAction) {
         val currentState = _connectionState.value ?: HubConnectionState.Uninitialized()
+        println("ConnectionStateProvider: Dispatching action: ${action::class.simpleName} from state: ${currentState::class.simpleName}")
         val newState = connectionStateReducer(currentState, action)
+        println("ConnectionStateProvider: Transitioning to state: ${newState::class.simpleName}")
 
         // Ensure we're on the main thread when updating LiveData
         if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
@@ -112,7 +114,28 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                         // If the refresh token was invalidated for some reason,
                         // we will discover it when we try to refresh the access
                         // token. In this case, fall back to login screen,
-                        // clearing the invalid token
+                        // clearing the invalid token and preserving the error message
+                        val updatedAccounts = state.accountList.accounts.map {
+                            if (it.id == state.loginAccount.id) {
+                                it.copy(refreshToken = null)
+                            } else {
+                                it
+                            }
+                        }
+                        val updatedLoginAccount = updatedAccounts.find { it.id == state.loginAccount.id } ?: state.loginAccount
+
+                        HubConnectionState.WaitingForLogin(
+                            HubAccountList(
+                                updatedAccounts,
+                                state.accountList.selectedAccount,
+                            ),
+                            updatedLoginAccount,
+                            state.loginPassword, // Preserve password for retry
+                            action.error // connectionError
+                        )
+                    }
+
+                    is HubConnectionState.Connecting.RegisteringAppComponents -> {
                         HubConnectionState.WaitingForLogin(
                             HubAccountList(
                                 state.accountList.accounts.map {
@@ -124,9 +147,30 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                                 },
                                 state.accountList.selectedAccount,
                             ),
-                            state.loginAccount
+                            state.loginAccount,
+                            state.loginPassword,
+                            action.error
                         )
                     }
+
+                    is HubConnectionState.Connecting.InitialConnection -> {
+                        HubConnectionState.WaitingForLogin(
+                            HubAccountList(
+                                state.accountList.accounts.map {
+                                    if (it.id == state.loginAccount.id) {
+                                        it.copy(refreshToken = null)
+                                    } else {
+                                        it
+                                    }
+                                },
+                                state.accountList.selectedAccount,
+                            ),
+                            state.loginAccount,
+                            state.loginPassword,
+                            action.error
+                        )
+                    }
+
                     // There is no other case where this is expected to happen
                     else -> state
                 }
@@ -148,7 +192,8 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                             state.accountList,
                             state.loginAccount,
                             state.loginPassword,
-                            state.refreshToken
+                            state.refreshToken,
+                            state.backendComponentIDs
                         )
                     }
 
@@ -156,8 +201,10 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                         HubConnectionState.Connecting.RefreshingAccessToken(
                             state.accountList,
                             state.loginAccount,
-                            null,
-                            state.refreshToken
+                            null, // loginPassword is not available in Connected state
+                            state.refreshToken,
+                            state.backendComponentIDs,
+                            state.backendEventIDs
                         )
                     }
 
@@ -169,13 +216,26 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
             is ConnectionAction.ReceivedAccessToken -> {
                 when (state) {
                     is HubConnectionState.Connecting.RefreshingAccessToken -> {
-                        HubConnectionState.Connecting.RegisteringAppComponents(
-                            state.accountList,
-                            state.loginAccount,
-                            state.loginPassword,
-                            action.refreshToken,
-                            action.accessToken
-                        )
+                        // If we have backendComponentIDs, we can skip registration and go directly to InitialConnection
+                        if (state.backendComponentIDs != null && state.backendEventIDs != null) {
+                            HubConnectionState.Connecting.InitialConnection(
+                                state.accountList,
+                                state.loginAccount,
+                                state.loginPassword,
+                                action.refreshToken,
+                                action.accessToken,
+                                state.backendComponentIDs
+                            )
+                        } else {
+                            // Normal flow: go to RegisteringAppComponents
+                            HubConnectionState.Connecting.RegisteringAppComponents(
+                                state.accountList,
+                                state.loginAccount,
+                                state.loginPassword,
+                                action.refreshToken,
+                                action.accessToken
+                            )
+                        }
                     }
 
                     // This event only makes sense in this one particular state
