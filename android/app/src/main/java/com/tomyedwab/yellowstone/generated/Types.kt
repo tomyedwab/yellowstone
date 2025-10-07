@@ -9,52 +9,28 @@ import com.google.gson.annotations.SerializedName
  * Represents a single task in the system
  */
 data class Task(
-    @SerializedName("Id") val id: Int,
-    @SerializedName("Title") val title: String,
+    @SerializedName("CompletedAt") val completedAt: String?,
     @SerializedName("DueDate") val dueDate: String?,
-    @SerializedName("CompletedAt") val completedAt: String?
-)
-/**
- * Response containing a list of tasks
- */
-data class TaskResponse(
-    @SerializedName("Tasks") val tasks: List<Task>
+    @SerializedName("Id") val id: Int,
+    @SerializedName("Title") val title: String
 )
 /**
  * Represents a single history entry for a task
  */
 data class TaskHistory(
+    @SerializedName("CreatedAt") val createdAt: String,
+    @SerializedName("Id") val id: Int,
+    @SerializedName("SystemComment") val systemComment: String,
     @SerializedName("TaskId") val taskId: Int,
     @SerializedName("UpdateType") val updateType: String,
-    @SerializedName("SystemComment") val systemComment: String,
-    @SerializedName("UserComment") val userComment: String?,
-    @SerializedName("CreatedAt") val createdAt: String,
-    @SerializedName("Id") val id: Int
+    @SerializedName("UserComment") val userComment: String?
 )
 /**
  * Response containing task history and title
  */
 data class TaskHistoryResponse(
-    @SerializedName("Title") val title: String,
-    @SerializedName("History") val history: List<TaskHistory>
-)
-/**
- * Response containing a list of task lists
- */
-data class TaskListResponse(
-    @SerializedName("TaskLists") val taskLists: List<TaskList>
-)
-/**
- * Response containing task list metadata
- */
-data class TaskListMetadataResponse(
-    @SerializedName("Metadata") val metadata: List<TaskListMetadata>
-)
-/**
- * Response containing recent comments for tasks in a list
- */
-data class TaskRecentCommentResponse(
-    @SerializedName("Comments") val comments: List<TaskRecentComment>
+    @SerializedName("History") val history: List<TaskHistory>,
+    @SerializedName("Title") val title: String
 )
 /**
  * Label information for a task
@@ -65,11 +41,17 @@ data class TaskLabels(
     @SerializedName("TaskId") val taskId: Int
 )
 /**
+ * Response containing task labels for tasks in a list
+ */
+data class TaskLabelsResponse(
+    @SerializedName("Labels") val labels: List<TaskLabels>
+)
+/**
  * Represents a task list in the system
  */
 data class TaskList(
-    @SerializedName("Category") val category: String,
     @SerializedName("Archived") val archived: Boolean,
+    @SerializedName("Category") val category: String,
     @SerializedName("Id") val id: Int,
     @SerializedName("Title") val title: String
 )
@@ -77,22 +59,40 @@ data class TaskList(
  * Metadata information for a task list
  */
 data class TaskListMetadata(
+    @SerializedName("Completed") val completed: Int,
     @SerializedName("ListId") val listId: Int,
-    @SerializedName("Total") val total: Int,
-    @SerializedName("Completed") val completed: Int
+    @SerializedName("Total") val total: Int
+)
+/**
+ * Response containing task list metadata
+ */
+data class TaskListMetadataResponse(
+    @SerializedName("Metadata") val metadata: List<TaskListMetadata>
+)
+/**
+ * Response containing a list of task lists
+ */
+data class TaskListResponse(
+    @SerializedName("TaskLists") val taskLists: List<TaskList>
 )
 /**
  * Recent comment information for a task
  */
 data class TaskRecentComment(
-    @SerializedName("UserComment") val userComment: String?,
     @SerializedName("CreatedAt") val createdAt: String?,
     @SerializedName("ListId") val listId: Int,
-    @SerializedName("TaskId") val taskId: Int
+    @SerializedName("TaskId") val taskId: Int,
+    @SerializedName("UserComment") val userComment: String?
 )
 /**
- * Response containing task labels for tasks in a list
+ * Response containing recent comments for tasks in a list
  */
-data class TaskLabelsResponse(
-    @SerializedName("Labels") val labels: List<TaskLabels>
+data class TaskRecentCommentResponse(
+    @SerializedName("Comments") val comments: List<TaskRecentComment>
+)
+/**
+ * Response containing a list of tasks
+ */
+data class TaskResponse(
+    @SerializedName("Tasks") val tasks: List<Task>
 )
