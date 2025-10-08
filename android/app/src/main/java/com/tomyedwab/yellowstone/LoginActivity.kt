@@ -160,7 +160,6 @@ class LoginActivity : AppCompatActivity() {
             isFocusable = true
         }
 
-        val inflater = LayoutInflater.from(this)
         val cardContent = LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -216,7 +215,7 @@ class LoginActivity : AppCompatActivity() {
                     binding.errorText.visibility = View.GONE
                 }
 
-                val hasSavedAccounts = state.accountList?.accounts?.isNotEmpty() == true
+                val hasSavedAccounts = state.accountList.accounts.isNotEmpty()
                 if (hasSavedAccounts) {
                     binding.statusText.text = "Select an account to connect"
                     binding.tabContainer.visibility = View.VISIBLE

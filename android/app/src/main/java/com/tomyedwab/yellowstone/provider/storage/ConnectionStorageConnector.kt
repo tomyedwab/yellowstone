@@ -44,7 +44,7 @@ class ConnectionStorageConnector(
     private fun handleStateChange(state: HubConnectionState) {
         when (state) {
             is HubConnectionState.Connecting.LoggingIn -> {
-                clearSelectionOnLoginStart(state)
+                clearSelectionOnLoginStart()
             }
             is HubConnectionState.Connected -> {
                 saveSuccessfulConnection(state)
@@ -53,7 +53,7 @@ class ConnectionStorageConnector(
         }
     }
 
-    private fun clearSelectionOnLoginStart(state: HubConnectionState) {
+    private fun clearSelectionOnLoginStart() {
         val currentAccountList = storageProvider.loadHubAccounts()
         if (currentAccountList.selectedAccount != null) {
             storageProvider.clearSelectedAccount()
@@ -61,7 +61,7 @@ class ConnectionStorageConnector(
     }
 
     private fun saveSuccessfulConnection(state: HubConnectionState.Connected) {
-        val savedAccount = storageProvider.saveHubAccount(
+        storageProvider.saveHubAccount(
             hubUrl = state.loginAccount.url,
             username = state.loginAccount.name,
             refreshToken = state.refreshToken

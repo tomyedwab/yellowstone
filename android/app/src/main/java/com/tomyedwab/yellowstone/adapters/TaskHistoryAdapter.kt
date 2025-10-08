@@ -52,7 +52,7 @@ class TaskHistoryAdapter : RecyclerView.Adapter<TaskHistoryAdapter.HistoryViewHo
             }
 
             // Display system comment if present
-            if (entry.systemComment?.isNotEmpty() == true) {
+            if (entry.systemComment.isNotEmpty()) {
                 systemCommentText.text = entry.systemComment
                 systemCommentText.visibility = View.VISIBLE
             } else {

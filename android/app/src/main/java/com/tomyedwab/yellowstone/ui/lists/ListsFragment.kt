@@ -50,9 +50,7 @@ class ListsFragment : Fragment(), ConnectionServiceListener {
         progressBar = root.findViewById(R.id.progress_bar)
         errorText = root.findViewById(R.id.error_text)
 
-        if (fabAdd != null) {
-            fabAdd.visibility = View.VISIBLE
-        }
+        fabAdd.visibility = View.VISIBLE
 
         setupRecyclerView()
         setupFab()

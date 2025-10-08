@@ -70,7 +70,7 @@ class DataViewService(private val authService: AuthService) {
                 // Update ref count
                 cache[queryKey] = cachedEntry.copy(refCount = cachedEntry.refCount + 1)
                 
-                @Suppress("UNCHECKED_CAST")
+                @Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
                 result.value = DataViewResult(loading = false, data = cachedEntry.data as? T)
                 return@addSource
             }
@@ -82,8 +82,8 @@ class DataViewService(private val authService: AuthService) {
                     try {
                         val data = inFlightRequest.await()
                         withContext(Dispatchers.Main) {
-                            @Suppress("UNCHECKED_CAST")
-                            result.value = DataViewResult(loading = false, data = data as? T)
+                        @Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
+                        result.value = DataViewResult(loading = false, data = data as? T)
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
@@ -132,7 +132,6 @@ class DataViewService(private val authService: AuthService) {
                     
                     // Update result
                     withContext(Dispatchers.Main) {
-                        @Suppress("UNCHECKED_CAST")
                         result.value = DataViewResult(loading = false, data = data as? T)
                     }
                     

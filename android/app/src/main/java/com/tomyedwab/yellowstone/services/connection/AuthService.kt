@@ -129,7 +129,7 @@ class AuthService(
 
     suspend fun fetchAuthenticated(
         url: String,
-        refreshToken: String,
+        @Suppress("UNUSED_PARAMETER") refreshToken: String,
         accessToken: String,
         method: String = "GET",
         body: RequestBody? = null,

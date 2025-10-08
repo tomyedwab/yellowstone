@@ -116,6 +116,7 @@ class TaskListAdapter : RecyclerView.Adapter<TaskListAdapter.TaskListViewHolder>
         notifyItemMoved(fromPosition, toPosition)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun onItemMoved(fromPosition: Int, toPosition: Int) {
         val movedItem = taskLists[toPosition]
         val afterItem = if (toPosition > 0) taskLists[toPosition - 1] else null
