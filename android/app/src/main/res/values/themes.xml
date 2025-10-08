@@ -34,7 +34,7 @@
 
         <!-- Dialog styling -->
         <item name="materialAlertDialogTheme">@style/YellowstoneAlertDialog</item>
-        
+
         <!-- Popup menu styling -->
         <item name="popupMenuStyle">@style/YellowstonePopupMenu</item>
         <item name="actionOverflowMenuStyle">@style/YellowstonePopupMenu</item>
@@ -63,7 +63,7 @@
     <!-- Task card specific styling -->
     <style name="YellowstoneTaskCard" parent="YellowstoneCardView">
         <item name="cardCornerRadius">8dp</item>
-        <item name="android:layout_margin">4dp</item>
+        <item name="android:layout_margin">0dp</item>
     </style>
 
     <!-- New task card styling -->
