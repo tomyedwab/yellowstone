@@ -1,6 +1,7 @@
 package com.tomyedwab.yellowstone.ui.tasks
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.app.DatePickerDialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -13,6 +14,9 @@ import android.view.View
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
+import java.text.SimpleDateFormat
+import java.util.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -22,6 +26,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.adapters.TaskAdapter
 import com.tomyedwab.yellowstone.adapters.TaskItemTouchHelper
+import com.tomyedwab.yellowstone.generated.Task
 import com.tomyedwab.yellowstone.generated.TaskList
 import com.tomyedwab.yellowstone.services.connection.ConnectionService
 import com.tomyedwab.yellowstone.ui.history.TaskHistoryActivity
@@ -120,6 +125,9 @@ class TaskListPageActivity : AppCompatActivity() {
                 } else {
                     viewModel.toggleTaskCompletion(task.id)
                 }
+            },
+            onMenuClick = { task, action ->
+                handleTaskMenuAction(task, action)
             },
             isSelectionMode = { isSelectionMode }
         )
@@ -404,5 +412,56 @@ class TaskListPageActivity : AppCompatActivity() {
             TaskListPageViewModel.BatchOperation.COPY -> "copy"
             TaskListPageViewModel.BatchOperation.MOVE -> "move"
         }
+    }
+
+    private fun handleTaskMenuAction(task: Task, action: String) {
+        when (action) {
+            "edit_due_date" -> showEditDueDateDialog(task)
+            "clear_due_date" -> viewModel.clearTaskDueDate(task.id)
+            "delete_task" -> showDeleteTaskConfirmation(task)
+        }
+    }
+
+    private fun showEditDueDateDialog(task: Task) {
+        val calendar = Calendar.getInstance()
+        
+        // Parse existing due date if present
+        if (!task.dueDate.isNullOrEmpty()) {
+            try {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val date = sdf.parse(task.dueDate)
+                if (date != null) {
+                    calendar.time = date
+                }
+            } catch (e: Exception) {
+                // Use current date if parsing fails
+            }
+        }
+
+        DatePickerDialog(
+            this,
+            { _, year, month, dayOfMonth ->
+                calendar.set(year, month, dayOfMonth)
+                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+                val dueDate = sdf.format(calendar.time)
+                viewModel.updateTaskDueDate(task.id, dueDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun showDeleteTaskConfirmation(task: Task) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Delete Task")
+            .setMessage("Are you sure you want to delete \"${task.title}\"?")
+            .setPositiveButton("Delete") { _, _ ->
+                viewModel.deleteTask(task.id)
+                Toast.makeText(this, "Task deleted", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

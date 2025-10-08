@@ -152,6 +152,30 @@ class TaskListPageViewModel(
         _selectedTasks.value = emptySet()
     }
 
+    fun deleteTask(taskId: Int) {
+        viewModelScope.launch {
+            try {
+                events.taskDelete(taskId)
+            } catch (e: Exception) {
+                // Error handling would be managed by the data views
+            }
+        }
+    }
+
+    fun updateTaskDueDate(taskId: Int, dueDate: String?) {
+        viewModelScope.launch {
+            try {
+                events.taskUpdateDueDate(dueDate, taskId)
+            } catch (e: Exception) {
+                // Error handling would be managed by the data views
+            }
+        }
+    }
+
+    fun clearTaskDueDate(taskId: Int) {
+        updateTaskDueDate(taskId, null)
+    }
+
     fun performBatchOperation(operation: BatchOperation, targetListId: Int? = null) {
         val selectedTaskIds = _selectedTasks.value?.toList() ?: return
         if (selectedTaskIds.isEmpty()) return

@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
@@ -13,6 +15,7 @@ import java.util.Collections
 class TaskAdapter(
     private val onItemClick: (Task) -> Unit = {},
     private val onCheckboxClick: (Task) -> Unit = {},
+    private val onMenuClick: (Task, String) -> Unit = { _, _ -> },
     private val isSelectionMode: () -> Boolean = { false }
 ) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
@@ -25,6 +28,8 @@ class TaskAdapter(
         private val cbCompleted: CheckBox = itemView.findViewById(R.id.cb_task_completed)
         private val tvDueDate: TextView = itemView.findViewById(R.id.tv_due_date)
         private val cbSelection: CheckBox = itemView.findViewById(R.id.cb_task_selection)
+        private val ivMenu: ImageView = itemView.findViewById(R.id.iv_task_menu)
+        private val ivReorderHandle: ImageView = itemView.findViewById(R.id.iv_task_reorder_handle)
 
         fun bind(task: Task) {
             tvTitle.text = task.title
@@ -34,11 +39,15 @@ class TaskAdapter(
                 cbSelection.visibility = View.VISIBLE
                 cbSelection.isChecked = selectedTasks.contains(task.id)
                 cbSelection.setOnClickListener { onCheckboxClick(task) }
+                ivMenu.visibility = View.GONE
+                ivReorderHandle.visibility = View.GONE
             } else {
                 cbCompleted.visibility = View.VISIBLE
                 cbSelection.visibility = View.GONE
                 cbCompleted.isChecked = task.completedAt != null
                 cbCompleted.setOnClickListener { onCheckboxClick(task) }
+                ivMenu.visibility = View.VISIBLE
+                ivReorderHandle.visibility = View.VISIBLE
             }
 
             if (!task.dueDate.isNullOrEmpty()) {
@@ -57,6 +66,39 @@ class TaskAdapter(
             }
 
             itemView.setOnClickListener { onItemClick(task) }
+            
+            ivMenu.setOnClickListener { view ->
+                showPopupMenu(view, task)
+            }
+        }
+        
+        private fun showPopupMenu(view: View, task: Task) {
+            val themedContext = androidx.appcompat.view.ContextThemeWrapper(view.context, R.style.YellowstonePopupTheme)
+            val popup = PopupMenu(themedContext, view)
+            popup.menuInflater.inflate(R.menu.task_overflow_menu, popup.menu)
+            
+            // Show/hide menu items based on task state
+            val clearDueDateItem = popup.menu.findItem(R.id.action_clear_due_date)
+            clearDueDateItem.isVisible = !task.dueDate.isNullOrEmpty()
+            
+            popup.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.action_edit_due_date -> {
+                        onMenuClick(task, "edit_due_date")
+                        true
+                    }
+                    R.id.action_clear_due_date -> {
+                        onMenuClick(task, "clear_due_date")
+                        true
+                    }
+                    R.id.action_delete_task -> {
+                        onMenuClick(task, "delete_task")
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
         }
     }
 

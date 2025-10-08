@@ -51,6 +51,16 @@
         </LinearLayout>
 
         <ImageView
+            android:id="@+id/iv_task_menu"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_more_vert"
+            android:contentDescription="Task options"
+            android:visibility="visible"
+            app:tint="@color/primary" />
+
+        <ImageView
             android:id="@+id/iv_task_reorder_handle"
             android:layout_width="24dp"
             android:layout_height="24dp"

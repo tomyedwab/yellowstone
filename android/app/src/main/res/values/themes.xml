@@ -34,6 +34,11 @@
 
         <!-- Dialog styling -->
         <item name="materialAlertDialogTheme">@style/YellowstoneAlertDialog</item>
+        
+        <!-- Popup menu styling -->
+        <item name="popupMenuStyle">@style/YellowstonePopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/YellowstonePopupMenu</item>
+        <item name="popupTheme">@style/YellowstonePopupTheme</item>
 
         <!-- Window settings for full dark theme -->
         <item name="android:windowLightStatusBar">false</item>
@@ -126,4 +131,41 @@
     </style>
 
     <!-- Button spacing is handled by individual button styles, not a container style -->
+
+    <!-- Popup menu styling for light text on dark background -->
+    <style name="YellowstonePopupMenu" parent="Widget.MaterialComponents.PopupMenu.Overflow">
+        <!-- Background color -->
+        <item name="android:popupBackground">@color/surface_background</item>
+        <!-- Text color - light for dark background -->
+        <item name="android:textColor">@color/text_primary</item>
+        <!-- Item background color -->
+        <item name="android:colorBackground">@color/surface_background</item>
+    </style>
+
+    <!-- Alternative popup menu theme with more specific attributes -->
+    <style name="YellowstonePopupMenu.Alternative" parent="ThemeOverlay.MaterialComponents.Dark">
+        <item name="android:popupBackground">@color/surface_background</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:colorBackground">@color/surface_background</item>
+        <item name="colorSurface">@color/surface_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+    </style>
+
+    <!-- Popup theme for context menus -->
+    <style name="YellowstonePopupTheme" parent="ThemeOverlay.MaterialComponents.Dark">
+        <item name="android:colorBackground">@color/surface_background</item>
+        <item name="colorSurface">@color/surface_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:itemTextAppearance">@style/YellowstonePopupMenuTextAppearance</item>
+    </style>
+
+    <!-- Text appearance for popup menu items -->
+    <style name="YellowstonePopupMenuTextAppearance" parent="TextAppearance.AppCompat.Widget.PopupMenu.Large">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">16sp</item>
+    </style>
 </resources>
