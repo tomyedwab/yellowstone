@@ -10,7 +10,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.tomyedwab.yellowstone.R
 import com.tomyedwab.yellowstone.generated.Task
-import java.util.Collections
+import java.text.SimpleDateFormat
+import java.util.*
 
 class TaskAdapter(
     private val onItemClick: (Task) -> Unit = {},
@@ -22,6 +23,8 @@ class TaskAdapter(
     private var tasks: MutableList<Task> = mutableListOf()
     private var selectedTasks: Set<Int> = emptySet()
     private var selectionMode: Boolean = false
+    private val displayDateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+    private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
 
     inner class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_task_title)
@@ -51,7 +54,16 @@ class TaskAdapter(
             }
 
             if (!task.dueDate.isNullOrEmpty()) {
-                tvDueDate.text = task.dueDate
+                try {
+                    val date = isoDateFormat.parse(task.dueDate)
+                    tvDueDate.text = if (date != null) {
+                        "Due on ${displayDateFormat.format(date)}"
+                    } else {
+                        task.dueDate
+                    }
+                } catch (e: Exception) {
+                    tvDueDate.text = task.dueDate
+                }
                 tvDueDate.visibility = View.VISIBLE
             } else {
                 tvDueDate.visibility = View.GONE
