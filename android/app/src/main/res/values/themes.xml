@@ -32,6 +32,9 @@
         <!-- Card styling -->
         <item name="materialCardViewStyle">@style/YellowstoneCardView</item>
 
+        <!-- Dialog styling -->
+        <item name="materialAlertDialogTheme">@style/YellowstoneAlertDialog</item>
+
         <!-- Window settings for full dark theme -->
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
@@ -71,4 +74,56 @@
         <item name="chipStrokeWidth">0.5dp</item>
         <item name="android:textAppearance">@style/YellowstoneTextAppearance.ChipLabel</item>
     </style>
+
+    <!-- Alert Dialog styling for better button contrast -->
+    <style name="YellowstoneAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <!-- Button styling for better contrast -->
+        <item name="buttonBarPositiveButtonStyle">@style/YellowstoneDialogButton.Positive</item>
+        <item name="buttonBarNegativeButtonStyle">@style/YellowstoneDialogButton.Negative</item>
+        <!-- Dialog background -->
+        <item name="android:background">@color/surface_background</item>
+        <!-- Text colors for better contrast -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <!-- Button bar styling for proper spacing -->
+        <!-- buttonBarStyle is not used in MaterialAlertDialogBuilder -->
+        <!-- Control overall dialog padding for better button spacing -->
+        <item name="dialogPreferredPadding">24dp</item>
+    </style>
+
+    <!-- Positive (OK) button style - should stand out as action button -->
+    <style name="YellowstoneDialogButton.Positive" parent="Widget.MaterialComponents.Button">
+        <item name="android:textColor">@color/surface_background</item>
+        <item name="backgroundTint">@color/primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.MaterialComponents.Button</item>
+        <item name="cornerRadius">4dp</item>
+        <!-- Add margin for spacing between buttons -->
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+    </style>
+
+    <!-- Negative (Cancel) button style - better contrast -->
+    <style name="YellowstoneDialogButton.Negative" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.MaterialComponents.Button</item>
+        <!-- Add margin for spacing between buttons -->
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+    </style>
+
+    <!-- EditText style for dialogs - light text on dark background -->
+    <style name="YellowstoneDialogEditText" parent="Widget.AppCompat.EditText">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:backgroundTint">@color/primary</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:layout_marginStart">16dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <!-- Button spacing is handled by individual button styles, not a container style -->
 </resources>

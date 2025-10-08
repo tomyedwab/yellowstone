@@ -2,7 +2,7 @@ package com.tomyedwab.yellowstone.ui.labels
 
 import com.tomyedwab.yellowstone.ConnectionServiceListener
 
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -126,11 +126,11 @@ class LabelsFragment : Fragment(), ConnectionServiceListener {
     }
 
     private fun showAddLabelDialog() {
-        val editText = EditText(requireContext()).apply {
+        val editText = EditText(requireContext(), null, 0, R.style.YellowstoneDialogEditText).apply {
             hint = "Enter label title"
         }
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Create New Label")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->

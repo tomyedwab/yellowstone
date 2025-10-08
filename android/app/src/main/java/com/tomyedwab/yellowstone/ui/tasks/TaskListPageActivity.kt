@@ -1,6 +1,6 @@
 package com.tomyedwab.yellowstone.ui.tasks
 
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -302,11 +302,11 @@ class TaskListPageActivity : AppCompatActivity() {
     }
 
     private fun showAddTaskDialog() {
-        val editText = EditText(this).apply {
+        val editText = EditText(this, null, 0, R.style.YellowstoneDialogEditText).apply {
             hint = "Enter task title"
         }
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Add New Task")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
@@ -320,13 +320,13 @@ class TaskListPageActivity : AppCompatActivity() {
     }
 
     private fun showRenameListDialog() {
-        val editText = EditText(this).apply {
+        val editText = EditText(this, null, 0, R.style.YellowstoneDialogEditText).apply {
             hint = "Enter list title"
             setText(listTitle)
             selectAll()
         }
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Rename List")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
@@ -349,7 +349,7 @@ class TaskListPageActivity : AppCompatActivity() {
             "Clear Selection"
         )
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Batch Selection")
             .setItems(options) { _, which ->
                 when (which) {
@@ -377,7 +377,7 @@ class TaskListPageActivity : AppCompatActivity() {
 
     private fun showTargetListDialog(operation: TaskListPageViewModel.BatchOperation) {
         if (availableTaskLists.isEmpty()) {
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle("No Available Lists")
                 .setMessage("There are no other lists available to ${getOperationName(operation)} tasks to.")
                 .setPositiveButton("OK", null)
@@ -387,7 +387,7 @@ class TaskListPageActivity : AppCompatActivity() {
 
         val listTitles = availableTaskLists.map { it.title }.toTypedArray()
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Select Target List")
             .setItems(listTitles) { _, which ->
                 val targetList = availableTaskLists[which]

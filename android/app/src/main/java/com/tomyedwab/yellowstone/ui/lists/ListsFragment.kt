@@ -2,7 +2,7 @@ package com.tomyedwab.yellowstone.ui.lists
 
 import com.tomyedwab.yellowstone.ConnectionServiceListener
 
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -130,11 +130,11 @@ class ListsFragment : Fragment(), ConnectionServiceListener {
     }
 
     private fun showAddTaskListDialog() {
-        val editText = EditText(requireContext()).apply {
+        val editText = EditText(requireContext(), null, 0, R.style.YellowstoneDialogEditText).apply {
             hint = "Enter task list name"
         }
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Add New Task List")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->

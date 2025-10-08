@@ -2,7 +2,7 @@ package com.tomyedwab.yellowstone.ui.templates
 
 import com.tomyedwab.yellowstone.ConnectionServiceListener
 
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -125,12 +125,12 @@ class TemplatesFragment : Fragment(), ConnectionServiceListener {
     }
 
     private fun showAddTemplateDialog() {
-        val editText = EditText(requireContext()).apply {
+        val editText = EditText(requireContext(), null, 0, R.style.YellowstoneDialogEditText).apply {
             hint = "Enter template title"
             requestFocus()
         }
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Create New Template")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
