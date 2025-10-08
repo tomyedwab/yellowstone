@@ -23,6 +23,7 @@
 
         <CheckBox
             android:id="@+id/cb_task_selection"
+            style="@style/YellowstoneSelectionCheckbox"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="12dp"

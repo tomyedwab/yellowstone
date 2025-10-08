@@ -168,4 +168,17 @@
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:textSize">16sp</item>
     </style>
+
+    <!-- Selection checkbox style for batch select mode - more prominent visual indicator -->
+    <style name="YellowstoneSelectionCheckbox" parent="Widget.AppCompat.CompoundButton.CheckBox">
+        <!-- Use secondary color (selection_highlight) for the checkbox to make it stand out -->
+        <item name="buttonTint">@color/selection_highlight</item>
+        <!-- Make the checkbox slightly larger for better visibility -->
+        <item name="android:scaleX">1.2</item>
+        <item name="android:scaleY">1.2</item>
+        <!-- Add some padding to make it more prominent -->
+        <item name="android:padding">4dp</item>
+        <!-- Add background tint when checked to provide additional visual feedback -->
+        <item name="android:background">@drawable/selection_checkbox_background</item>
+    </style>
 </resources>
