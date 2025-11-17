@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 interface StateDispatcher {
     fun dispatch(action: ConnectionAction)
@@ -24,17 +25,39 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
     }
 
     override fun dispatch(action: ConnectionAction) {
-        val currentState = _connectionState.value ?: HubConnectionState.Uninitialized()
-        println("ConnectionStateProvider: Dispatching action: ${action::class.simpleName} from state: ${currentState::class.simpleName}")
-        val newState = connectionStateReducer(currentState, action)
-        println("ConnectionStateProvider: Transitioning to state: ${newState::class.simpleName}")
+        // Ensure we're on the main thread when reading state, computing new state, and updating LiveData
+        // This prevents race conditions where multiple actions see the same stale state
+        val isMainThread = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+        val threadName = Thread.currentThread().name
 
-        // Ensure we're on the main thread when updating LiveData
-        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
-            _connectionState.value = newState
-        } else {
-            mainScope.launch {
+        Timber.d("dispatch() called on thread: $threadName (isMainThread: $isMainThread), action: ${action::class.simpleName}")
+
+        if (isMainThread) {
+            val currentState = _connectionState.value ?: HubConnectionState.Uninitialized()
+            Timber.d("Dispatching ${action::class.simpleName} from state: ${currentState::class.simpleName}")
+            val newState = connectionStateReducer(currentState, action)
+            Timber.d("Transitioning from ${currentState::class.simpleName} to ${newState::class.simpleName}")
+
+            if (currentState != newState) {
                 _connectionState.value = newState
+                Timber.d("State updated to: ${newState::class.simpleName}")
+            } else {
+                Timber.d("State unchanged (${currentState::class.simpleName})")
+            }
+        } else {
+            Timber.d("Scheduling dispatch on main thread for action: ${action::class.simpleName}")
+            mainScope.launch {
+                val currentState = _connectionState.value ?: HubConnectionState.Uninitialized()
+                Timber.d("Dispatching ${action::class.simpleName} from state: ${currentState::class.simpleName} (on main thread)")
+                val newState = connectionStateReducer(currentState, action)
+                Timber.d("Transitioning from ${currentState::class.simpleName} to ${newState::class.simpleName}")
+
+                if (currentState != newState) {
+                    _connectionState.value = newState
+                    Timber.d("State updated to: ${newState::class.simpleName}")
+                } else {
+                    Timber.d("State unchanged (${currentState::class.simpleName})")
+                }
             }
         }
     }

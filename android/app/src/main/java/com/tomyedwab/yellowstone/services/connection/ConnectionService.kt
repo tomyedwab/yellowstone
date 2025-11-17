@@ -165,12 +165,13 @@ class ConnectionServiceCoroutineManager(
         if (desiredJobParameters != currentJobParameters) {
             Timber.d("Job parameters changed from $currentJobParameters to $desiredJobParameters")
             val oldJob = currentJob
+            val oldJobType = currentJobParameters?.type
             currentJobParameters = desiredJobParameters
             currentJob = coroutineScope.launch {
                 Timber.d("Starting new coroutine for job: ${desiredJobParameters?.type}")
                 // Don't cancel the old job if it's publishing events (PUBLISH_EVENT)
                 // This allows these operations to complete even if the state changes
-                if (oldJob != null && currentJobParameters?.type != JobType.PUBLISH_EVENT) {
+                if (oldJob != null && oldJobType != JobType.PUBLISH_EVENT) {
                     Timber.d("Cancelling old job")
                     oldJob.cancel()
                     oldJob.join()
@@ -249,6 +250,10 @@ class ConnectionServiceCoroutineManager(
             stateDispatcher.dispatch(
                     ConnectionAction.StartConnection(account, refreshToken)
             )
+        } catch (e: CancellationException) {
+            Timber.d("Login request cancelled.")
+            // The coroutine was cancelled, so there is no need to dispatch any action
+            throw e
         } catch (e: Exception) {
             stateDispatcher.dispatch(
                     ConnectionAction.ConnectionFailed("Login failed: ${e.message}")
@@ -264,6 +269,10 @@ class ConnectionServiceCoroutineManager(
             stateDispatcher.dispatch(
                     ConnectionAction.ReceivedAccessToken(accessToken, newRefreshToken)
             )
+        } catch (e: CancellationException) {
+            Timber.d("Access token request cancelled.")
+            // The coroutine was cancelled, so there is no need to dispatch any action
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "Access token refresh failed: ${e.message}")
             Timber.d("Exception type: ${e::class.simpleName}")

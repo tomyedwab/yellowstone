@@ -26,10 +26,16 @@ class ConnectionStorageConnector(
 
     private fun loadInitialAccountData() {
         val accountList = storageProvider.loadHubAccounts()
-        connectionStateProvider.dispatch(ConnectionAction.AccountListLoaded(accountList))
+        val currentState = connectionStateProvider.connectionState.value
 
-        accountList.selectedAccount?.let { selectedAccountId ->
-            connectionStateProvider.dispatch(ConnectionAction.ConnectionSelected(selectedAccountId))
+        // Only dispatch AccountListLoaded if we're in Uninitialized state
+        // This prevents resetting an active connection when reconnecting to the service
+        if (currentState is HubConnectionState.Uninitialized) {
+            connectionStateProvider.dispatch(ConnectionAction.AccountListLoaded(accountList))
+
+            accountList.selectedAccount?.let { selectedAccountId ->
+                connectionStateProvider.dispatch(ConnectionAction.ConnectionSelected(selectedAccountId))
+            }
         }
     }
 
