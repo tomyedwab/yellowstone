@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
+import timber.log.Timber
 
 class UnauthenticatedError(message: String) : Exception(message)
 
@@ -158,13 +159,13 @@ class AuthService(
                 else -> requestBuilder.get()
             }
 
-            println("AuthService: Making request to $url with method $method")
+            Timber.d("Making request to $url with method $method")
             var response = client.newCall(requestBuilder.build()).execute()
-            println("AuthService: Received response: ${response.code}")
+            Timber.d("Received response: ${response.code}")
 
             // If unauthorized, raise exception to clear the access token & re-auth
             if (response.code == 401) {
-                println("AuthService: Got 401 response, throwing UnauthenticatedError")
+                Timber.d("Got 401 response, throwing UnauthenticatedError")
                 throw UnauthenticatedError("Invalid access token")
             }
 

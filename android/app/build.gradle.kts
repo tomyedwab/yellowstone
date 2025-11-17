@@ -41,6 +41,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -158,6 +159,9 @@ dependencies {
 
     // Coroutines for async operations
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Timber for logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Encrypted SharedPreferences for secure storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
