@@ -17,6 +17,7 @@ import javax.net.ssl.X509TrustManager
 import timber.log.Timber
 
 class UnauthenticatedError(message: String) : Exception(message)
+class RefreshTokenError(message: String) : Exception(message)
 
 class AuthService(
     private val allowInsecureConnections: Boolean = false,
@@ -111,19 +112,22 @@ class AuthService(
                         if (accessToken != null) {
                             return@withContext accessToken to newRefreshToken
                         } else {
-                            throw UnauthenticatedError("Malformed response: missing access_token field")
+                            throw RefreshTokenError("Malformed response: missing access_token field")
                         }
                     } else if (it.code == 401) {
                         // Refresh token is invalid
                         throw UnauthenticatedError("Refresh token invalid: HTTP 401")
+                    } else if (it.code == 403) {
+                        // The user is not authorized
+                        throw UnauthenticatedError("Access denied: HTTP 403")
                     } else {
-                        throw UnauthenticatedError("Failed to refresh token: HTTP ${it.code} - ${it.message}")
+                        throw RefreshTokenError("Failed to refresh token: HTTP ${it.code} - ${it.message}")
                     }
                 }
             } catch (e: IOException) {
-                throw UnauthenticatedError("Network error during access token refresh: ${e.message}")
+                throw RefreshTokenError("Network error during access token refresh: ${e.message}")
             } catch (e: Exception) {
-                throw UnauthenticatedError("Access token refresh failed: ${e.message}")
+                throw RefreshTokenError("Access token refresh failed: ${e.message}")
             }
         }
     }

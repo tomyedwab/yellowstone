@@ -186,12 +186,14 @@ class ConnectionServiceCoroutineManager(
                                 desiredJobParameters.loginAccount!!,
                             )
                         }
+
                         JobType.ACCESS_TOKEN -> {
                             sendAccessTokenRequest(
                                 desiredJobParameters.url,
                                 desiredJobParameters.refreshToken!!,
                             )
                         }
+
                         JobType.APP_COMPONENTS -> {
                             sendAppRegistrationRequest(
                                 desiredJobParameters.url,
@@ -199,6 +201,7 @@ class ConnectionServiceCoroutineManager(
                                 desiredJobParameters.accessToken!!,
                             )
                         }
+
                         JobType.EVENT_SYNC -> {
                             waitForEventSync(
                                 desiredJobParameters.url,
@@ -207,6 +210,7 @@ class ConnectionServiceCoroutineManager(
                                 desiredJobParameters.backendComponentIDs!!,
                             )
                         }
+
                         JobType.PUBLISH_EVENT -> {
                             Timber.d("Starting PUBLISH_EVENT coroutine")
                             try {
@@ -223,6 +227,7 @@ class ConnectionServiceCoroutineManager(
                                 throw e
                             }
                         }
+
                         JobType.EVENT_POLL -> {
                             pollEvents(
                                 desiredJobParameters.url,
@@ -240,15 +245,15 @@ class ConnectionServiceCoroutineManager(
     }
 
     private suspend fun sendLoginRequest(
-            url: String,
-            username: String,
-            password: String,
-            account: HubAccount
+        url: String,
+        username: String,
+        password: String,
+        account: HubAccount
     ) {
         try {
             val refreshToken = authService.doLogin(url, username, password)
             stateDispatcher.dispatch(
-                    ConnectionAction.StartConnection(account, refreshToken)
+                ConnectionAction.StartConnection(account, refreshToken)
             )
         } catch (e: CancellationException) {
             Timber.d("Login request cancelled.")
@@ -256,39 +261,70 @@ class ConnectionServiceCoroutineManager(
             throw e
         } catch (e: Exception) {
             stateDispatcher.dispatch(
-                    ConnectionAction.ConnectionFailed("Login failed: ${e.message}")
+                ConnectionAction.ConnectionFailed("Login failed: ${e.message}")
             )
         }
     }
 
     private suspend fun sendAccessTokenRequest(url: String, refreshToken: String) {
-        try {
-            Timber.d("Requesting access token with refresh token")
-            val (accessToken, newRefreshToken) = authService.refreshAccessToken(url, refreshToken)
-            Timber.d("Access token received successfully")
-            stateDispatcher.dispatch(
+        val maxRetries = 3
+        var attempt = 0
+
+        while (attempt <= maxRetries) {
+            try {
+                if (attempt > 0) {
+                    Timber.d("Retry attempt $attempt of $maxRetries for access token refresh")
+                } else {
+                    Timber.d("Requesting access token with refresh token")
+                }
+
+                val (accessToken, newRefreshToken) = authService.refreshAccessToken(url, refreshToken)
+                Timber.d("Access token received successfully")
+                stateDispatcher.dispatch(
                     ConnectionAction.ReceivedAccessToken(accessToken, newRefreshToken)
-            )
-        } catch (e: CancellationException) {
-            Timber.d("Access token request cancelled.")
-            // The coroutine was cancelled, so there is no need to dispatch any action
-            throw e
-        } catch (e: Exception) {
-            Timber.e(e, "Access token refresh failed: ${e.message}")
-            Timber.d("Exception type: ${e::class.simpleName}")
-            val errorMessage = when {
-                e.message?.contains("Network error") == true -> "Access token refresh failure: Network error"
-                e.message?.contains("refresh token", ignoreCase = true) == true -> "Access token refresh failure: Refresh token invalid"
-                else -> "Access token refresh failure: ${e.message}"
+                )
+                return
+            } catch (e: CancellationException) {
+                Timber.d("Access token request cancelled.")
+                // The coroutine was cancelled, so there is no need to dispatch any action
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "Access token refresh failed (attempt ${attempt + 1}): ${e.message}")
+                Timber.d("Exception type: ${e::class.simpleName}")
+
+                // Don't retry on 401/403 errors - these are unlikely to be recoverable
+                val is401Error = e is UnauthenticatedError ||
+                        e.message?.contains("401") == true ||
+                        e.message?.contains("403") == true
+
+                if (is401Error || attempt >= maxRetries) {
+                    // Final failure - dispatch error
+                    val errorMessage = when {
+                        e.message?.contains("Network error") == true -> "Access token refresh failure: Network error"
+                        e.message?.contains(
+                            "refresh token",
+                            ignoreCase = true
+                        ) == true -> "Access token refresh failure: Refresh token invalid"
+
+                        else -> "Access token refresh failure: ${e.message}"
+                    }
+                    stateDispatcher.dispatch(ConnectionAction.RefreshTokenInvalid(errorMessage))
+                    return
+                }
+
+                // Wait before retry with exponential backoff
+                val delayMs = 1000L * (1 shl attempt) // 1s, 2s, 4s
+                Timber.d("Waiting ${delayMs}ms before retry")
+                delay(delayMs)
+                attempt++
             }
-            stateDispatcher.dispatch(ConnectionAction.RefreshTokenInvalid(errorMessage))
         }
     }
 
     private suspend fun sendAppRegistrationRequest(
-            url: String,
-            refreshToken: String,
-            accessToken: String
+        url: String,
+        refreshToken: String,
+        accessToken: String
     ) {
         try {
             val componentHashes = assetLoader.loadComponentHashes()
@@ -301,13 +337,13 @@ class ConnectionServiceCoroutineManager(
 
             Timber.d("Making app registration request to $url/apps/register")
             val response =
-                    authService.fetchAuthenticated(
-                            "$url/apps/register",
-                            refreshToken,
-                            accessToken,
-                            "POST",
-                            requestBody
-                    )
+                authService.fetchAuthenticated(
+                    "$url/apps/register",
+                    refreshToken,
+                    accessToken,
+                    "POST",
+                    requestBody
+                )
 
             val componentIDs = mutableMapOf<String, String>()
             val componentsToInstall = mutableListOf<String>()
@@ -319,11 +355,11 @@ class ConnectionServiceCoroutineManager(
                     Timber.d("App registration response body: $responseBody")
 
                     val responseJson =
-                            gson.fromJson(
-                                    responseBody,
-                                    object : TypeToken<Map<String, String?>>() {}.type
-                            ) as
-                                    Map<String, String?>
+                        gson.fromJson(
+                            responseBody,
+                            object : TypeToken<Map<String, String?>>() {}.type
+                        ) as
+                                Map<String, String?>
 
                     // Handle components that need installation
                     for ((appName, instanceId) in responseJson) {
@@ -341,7 +377,8 @@ class ConnectionServiceCoroutineManager(
             for (componentName in componentsToInstall) {
                 // Component needs to be installed - send binary to server
                 Timber.i("Installing component: $componentName")
-                val installedInstanceId = installComponent(url, refreshToken, accessToken, componentName, componentHashes[componentName]!!)
+                val installedInstanceId =
+                    installComponent(url, refreshToken, accessToken, componentName, componentHashes[componentName]!!)
                 if (installedInstanceId != null) {
                     componentIDs[componentName] = installedInstanceId
                     Timber.i("Successfully installed $componentName with instance ID: $installedInstanceId")
@@ -352,17 +389,17 @@ class ConnectionServiceCoroutineManager(
 
             Timber.d("App registration successful, dispatching MappedComponentIDs")
             stateDispatcher.dispatch(
-                    ConnectionAction.MappedComponentIDs(BackendComponentIDs(componentIDs))
-                )
+                ConnectionAction.MappedComponentIDs(BackendComponentIDs(componentIDs))
+            )
         } catch (e: UnauthenticatedError) {
             Timber.e(e, "UnauthenticatedError during app registration: ${e.message}")
             stateDispatcher.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: IOException) {
             Timber.e(e, "IOException during app registration: ${e.message}")
             stateDispatcher.dispatch(
-                    ConnectionAction.ConnectionFailed("App registration failed: Network error during registration")
+                ConnectionAction.ConnectionFailed("App registration failed: Network error during registration")
             )
         } catch (e: CancellationException) {
             Timber.d("App registration cancelled.")
@@ -371,13 +408,25 @@ class ConnectionServiceCoroutineManager(
             Timber.e(e, "Exception during app registration: ${e.message}")
             Timber.d("Exception type: ${e::class.simpleName}")
             val errorMessage = when {
-                e.message?.contains("Network error", ignoreCase = true) == true -> "App registration failed: Network error during registration"
-                e.message?.contains("HTTP 500", ignoreCase = true) == true -> "App registration failed: Server error (HTTP 500)"
-                e.message?.contains("HTTP 401", ignoreCase = true) == true -> "App registration failed: Authentication error (HTTP 401)"
+                e.message?.contains(
+                    "Network error",
+                    ignoreCase = true
+                ) == true -> "App registration failed: Network error during registration"
+
+                e.message?.contains(
+                    "HTTP 500",
+                    ignoreCase = true
+                ) == true -> "App registration failed: Server error (HTTP 500)"
+
+                e.message?.contains(
+                    "HTTP 401",
+                    ignoreCase = true
+                ) == true -> "App registration failed: Authentication error (HTTP 401)"
+
                 else -> "App registration failed: ${e.message}"
             }
             stateDispatcher.dispatch(
-                    ConnectionAction.ConnectionFailed(errorMessage)
+                ConnectionAction.ConnectionFailed(errorMessage)
             )
         }
     }
@@ -391,11 +440,11 @@ class ConnectionServiceCoroutineManager(
      * @return The instance ID returned by the server, or null if installation failed
      */
     private suspend fun installComponent(
-            url: String,
-            refreshToken: String,
-            accessToken: String,
-            componentName: String,
-            componentHash: String
+        url: String,
+        refreshToken: String,
+        accessToken: String,
+        componentName: String,
+        componentHash: String
     ): String? {
         return try {
             // Load the binary for this component
@@ -407,24 +456,24 @@ class ConnectionServiceCoroutineManager(
 
             // Create multipart request with the binary
             val binaryRequestBody =
-                    binaryData.toRequestBody("application/octet-stream".toMediaType())
+                binaryData.toRequestBody("application/octet-stream".toMediaType())
             val multipartBody =
-                    MultipartBody.Builder()
-                            .setType(MultipartBody.FORM)
-                            .addFormDataPart("content", "$componentName-binary", binaryRequestBody)
-                            .addFormDataPart("hash", componentHash)
-                            .build()
+                MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("content", "$componentName-binary", binaryRequestBody)
+                    .addFormDataPart("hash", componentHash)
+                    .build()
 
             Timber.i("Uploading binary for $componentName (${binaryData.size} bytes)")
 
             val response =
-                    authService.fetchAuthenticated(
-                            "$url/apps/install",
-                            refreshToken,
-                            accessToken,
-                            "POST",
-                            multipartBody
-                    )
+                authService.fetchAuthenticated(
+                    "$url/apps/install",
+                    refreshToken,
+                    accessToken,
+                    "POST",
+                    multipartBody
+                )
 
             response.use {
                 if (it.isSuccessful) {
@@ -459,10 +508,10 @@ class ConnectionServiceCoroutineManager(
     }
 
     private suspend fun waitForEventSync(
-            url: String,
-            refreshToken: String,
-            accessToken: String,
-            backendComponentIDs: BackendComponentIDs
+        url: String,
+        refreshToken: String,
+        accessToken: String,
+        backendComponentIDs: BackendComponentIDs
     ) {
         Timber.d("waitForEventSync called")
         try {
@@ -479,13 +528,13 @@ class ConnectionServiceCoroutineManager(
                 Timber.d("Request body: $eventsJson")
 
                 val response =
-                        authService.fetchAuthenticated(
-                                "$url/events/poll",
-                                refreshToken,
-                                accessToken,
-                                "POST",
-                                requestBody
-                        )
+                    authService.fetchAuthenticated(
+                        "$url/events/poll",
+                        refreshToken,
+                        accessToken,
+                        "POST",
+                        requestBody
+                    )
 
                 response.use {
                     Timber.d("Event sync response: ${it.code}")
@@ -495,11 +544,11 @@ class ConnectionServiceCoroutineManager(
 
                         try {
                             val data =
-                                    gson.fromJson(
-                                            responseBody,
-                                            object : TypeToken<Map<String, Int>>() {}.type
-                                    ) as
-                                            Map<String, Int>
+                                gson.fromJson(
+                                    responseBody,
+                                    object : TypeToken<Map<String, Int>>() {}.type
+                                ) as
+                                        Map<String, Int>
                             Timber.d("Parsed event data: $data")
 
                             val foundUninitialized = data.values.any { eventId -> eventId == -1 }
@@ -507,7 +556,7 @@ class ConnectionServiceCoroutineManager(
                             if (!foundUninitialized) {
                                 Timber.d("Event sync completed successfully")
                                 stateDispatcher.dispatch(
-                                        ConnectionAction.ConnectionSucceeded(data)
+                                    ConnectionAction.ConnectionSucceeded(data)
                                 )
                                 return
                             }
@@ -520,7 +569,7 @@ class ConnectionServiceCoroutineManager(
                             // Use default event data if parsing fails
                             val defaultData = mapOf("instance-123" to 0)
                             stateDispatcher.dispatch(
-                                    ConnectionAction.ConnectionSucceeded(defaultData)
+                                ConnectionAction.ConnectionSucceeded(defaultData)
                             )
                             return
                         }
@@ -536,7 +585,7 @@ class ConnectionServiceCoroutineManager(
         } catch (e: UnauthenticatedError) {
             Timber.e(e, "UnauthenticatedError during event sync: ${e.message}")
             stateDispatcher.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
         } catch (e: CancellationException) {
             Timber.d("Initial event sync cancelled.")
@@ -544,16 +593,16 @@ class ConnectionServiceCoroutineManager(
         } catch (e: Exception) {
             Timber.e(e, "Exception during event sync: ${e.message}")
             stateDispatcher.dispatch(
-                    ConnectionAction.ConnectionFailed("Event sync failed: ${e.message}")
+                ConnectionAction.ConnectionFailed("Event sync failed: ${e.message}")
             )
         }
     }
 
     private suspend fun publishEvent(
-            url: String,
-            refreshToken: String,
-            accessToken: String,
-            event: PendingEvent
+        url: String,
+        refreshToken: String,
+        accessToken: String,
+        event: PendingEvent
     ) {
         Timber.d("publishEvent called with event: ${event.clientId}")
         try {
@@ -562,20 +611,20 @@ class ConnectionServiceCoroutineManager(
 
             Timber.d("Making request to publish event: ${event.clientId}")
             val response =
-                    authService.fetchAuthenticated(
-                            "$url/events/publish",
-                            refreshToken,
-                            accessToken,
-                            "POST",
-                            requestBody
-                    )
+                authService.fetchAuthenticated(
+                    "$url/events/publish",
+                    refreshToken,
+                    accessToken,
+                    "POST",
+                    requestBody
+                )
 
             response.use {
                 Timber.d("Response received: ${it.code}")
                 if (it.isSuccessful) {
                     Timber.i("Successfully published event: ${event.clientId}")
                     stateDispatcher.dispatch(
-                            ConnectionAction.EventPublished(event.clientId)
+                        ConnectionAction.EventPublished(event.clientId)
                     )
                 } else {
                     Timber.e("Failed to publish event ${event.clientId}: ${it.code} - ${it.body?.string()}")
@@ -585,7 +634,7 @@ class ConnectionServiceCoroutineManager(
         } catch (e: UnauthenticatedError) {
             Timber.w(e, "UnauthenticatedError during event publish, triggering token refresh")
             stateDispatcher.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
             )
             // Don't re-throw - let the coroutine complete normally so the token refresh can proceed
             Timber.d("Token refresh triggered, event will be retried after refresh")
@@ -600,10 +649,10 @@ class ConnectionServiceCoroutineManager(
     }
 
     private suspend fun pollEvents(
-            url: String,
-            refreshToken: String,
-            accessToken: String,
-            initialEventIDs: Map<String, Int>
+        url: String,
+        refreshToken: String,
+        accessToken: String,
+        initialEventIDs: Map<String, Int>
     ) {
         Timber.d("pollEvents called with initial event IDs: $initialEventIDs")
         var currentEventIDs = initialEventIDs
@@ -618,13 +667,13 @@ class ConnectionServiceCoroutineManager(
                 Timber.d("Polling with event IDs: $eventsJson")
 
                 val response =
-                        authService.fetchAuthenticated(
-                                "$url/events/poll",
-                                refreshToken,
-                                accessToken,
-                                "POST",
-                                requestBody
-                        )
+                    authService.fetchAuthenticated(
+                        "$url/events/poll",
+                        refreshToken,
+                        accessToken,
+                        "POST",
+                        requestBody
+                    )
 
                 response.use {
                     Timber.d("Poll response: ${it.code}")
@@ -633,22 +682,24 @@ class ConnectionServiceCoroutineManager(
                             val responseBody = it.body?.string()
                             Timber.d("Poll response body: $responseBody")
                             val data =
-                                    gson.fromJson(
-                                            responseBody,
-                                            object : TypeToken<Map<String, Int>>() {}.type
-                                    ) as
-                                            Map<String, Int>
+                                gson.fromJson(
+                                    responseBody,
+                                    object : TypeToken<Map<String, Int>>() {}.type
+                                ) as
+                                        Map<String, Int>
                             currentEventIDs = data
                             Timber.d("Dispatching EventsUpdated with data: $data")
                             stateDispatcher.dispatch(ConnectionAction.EventsUpdated(data))
                         }
+
                         304 -> {
                             // Not modified - dispatch the same event IDs
                             Timber.d("Dispatching EventsUpdated with current data: $currentEventIDs")
                             stateDispatcher.dispatch(
-                                    ConnectionAction.EventsUpdated(currentEventIDs)
+                                ConnectionAction.EventsUpdated(currentEventIDs)
                             )
                         }
+
                         else -> {
                             Timber.w("Poll failed with response: ${it.code}")
                             throw Exception("HTTP ${it.code}: ${it.message}")
@@ -658,7 +709,7 @@ class ConnectionServiceCoroutineManager(
             } catch (e: UnauthenticatedError) {
                 Timber.e(e, "UnauthenticatedError during polling: ${e.message}")
                 stateDispatcher.dispatch(
-                        ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
                 )
             } catch (e: CancellationException) {
                 Timber.d("Polling cancelled.")
@@ -668,7 +719,7 @@ class ConnectionServiceCoroutineManager(
                 // In production, this should transition to "reconnecting" state
                 Timber.e(e, "Exception during polling: ${e.message}")
                 stateDispatcher.dispatch(
-                        ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
+                    ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
                 )
                 break // Exit the polling loop on error
             }
