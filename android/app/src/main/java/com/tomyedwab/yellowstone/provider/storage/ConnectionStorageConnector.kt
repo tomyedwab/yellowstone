@@ -55,7 +55,24 @@ class ConnectionStorageConnector(
             is HubConnectionState.Connected -> {
                 saveSuccessfulConnection(state)
             }
+            is HubConnectionState.WaitingForLogin -> {
+                // Check if any account lost its refresh token and persist that change
+                handleRefreshTokenChanges(state)
+            }
             else -> {}
+        }
+    }
+
+    private fun handleRefreshTokenChanges(state: HubConnectionState.WaitingForLogin) {
+        val currentStoredAccounts = storageProvider.loadHubAccounts()
+
+        // Find accounts that had a refresh token in storage but don't have one in the current state
+        state.accountList.accounts.forEach { stateAccount ->
+            val storedAccount = currentStoredAccounts.accounts.find { it.id == stateAccount.id }
+            if (storedAccount != null && storedAccount.refreshToken != null && stateAccount.refreshToken == null) {
+                // The account lost its refresh token, persist this change
+                storageProvider.clearRefreshToken(stateAccount.id)
+            }
         }
     }
 

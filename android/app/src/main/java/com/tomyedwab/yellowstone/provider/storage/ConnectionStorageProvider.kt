@@ -99,21 +99,39 @@ class ConnectionStorageProvider(private val context: Context) {
         }
     }
     
+    fun clearRefreshToken(accountId: String) {
+        val currentAccountList = loadHubAccounts()
+        val updatedAccounts = currentAccountList.accounts.map { account ->
+            if (account.id == accountId) {
+                account.copy(refreshToken = null)
+            } else {
+                account
+            }
+        }
+
+        val updatedAccountList = HubAccountList(
+            accounts = updatedAccounts,
+            selectedAccount = currentAccountList.selectedAccount
+        )
+
+        saveHubAccountList(updatedAccountList)
+    }
+
     fun removeAccount(accountId: String) {
         val currentAccountList = loadHubAccounts()
         val updatedAccounts = currentAccountList.accounts.filter { it.id != accountId }
-        
+
         val updatedSelectedAccount = if (currentAccountList.selectedAccount == accountId) {
             null
         } else {
             currentAccountList.selectedAccount
         }
-        
+
         val updatedAccountList = HubAccountList(
             accounts = updatedAccounts,
             selectedAccount = updatedSelectedAccount
         )
-        
+
         saveHubAccountList(updatedAccountList)
     }
     

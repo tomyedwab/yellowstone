@@ -140,13 +140,20 @@ class LoginActivity : AppCompatActivity() {
         val accountsList = binding.accountsList
         accountsList.removeAllViews()
 
-        currentState?.accountList?.accounts?.forEach { account ->
+        // Sort accounts: logged in (with refresh token) first, then logged out
+        val sortedAccounts = currentState?.accountList?.accounts?.sortedByDescending {
+            it.refreshToken != null
+        } ?: emptyList()
+
+        sortedAccounts.forEach { account ->
             val accountCard = createAccountCard(account)
             accountsList.addView(accountCard)
         }
     }
 
     private fun createAccountCard(account: HubAccount): View {
+        val isLoggedIn = account.refreshToken != null
+
         val cardView = MaterialCardView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -158,37 +165,84 @@ class LoginActivity : AppCompatActivity() {
             radius = 8f
             isClickable = true
             isFocusable = true
+            setCardBackgroundColor(getColor(
+                if (isLoggedIn) R.color.account_logged_in_background
+                else R.color.account_logged_out_background
+            ))
         }
 
+        // Main horizontal layout
         val cardContent = LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
             setPadding(32, 24, 32, 24)
+        }
+
+        // Left side: account info (name and URL)
+        val accountInfoLayout = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+            orientation = LinearLayout.VERTICAL
         }
 
         val nameText = TextView(this).apply {
             text = account.name
             textSize = 18f
             setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(getColor(R.color.text_primary))
         }
 
         val urlText = TextView(this).apply {
             text = account.url
             textSize = 14f
-            setTextColor(getColor(android.R.color.darker_gray))
+            setTextColor(getColor(R.color.text_secondary))
         }
 
-        cardContent.addView(nameText)
-        cardContent.addView(urlText)
+        accountInfoLayout.addView(nameText)
+        accountInfoLayout.addView(urlText)
+
+        // Right side: status text
+        val statusText = TextView(this).apply {
+            text = if (isLoggedIn) "Logged in" else "Logged out"
+            textSize = 12f
+            setTextColor(if (isLoggedIn) {
+                getColor(R.color.teal_200)
+            } else {
+                getColor(R.color.text_hint)
+            })
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+        }
+
+        cardContent.addView(accountInfoLayout)
+        cardContent.addView(statusText)
         cardView.addView(cardContent)
 
         cardView.setOnClickListener {
-            connectionService?.getConnectionStateProvider()?.dispatch(
-                ConnectionAction.ConnectionSelected(account.id)
-            )
+            if (isLoggedIn) {
+                // Resume the session by dispatching ConnectionSelected
+                connectionService?.getConnectionStateProvider()?.dispatch(
+                    ConnectionAction.ConnectionSelected(account.id)
+                )
+            } else {
+                // Switch to New Account tab and fill in the account information
+                binding.tabLayout.selectTab(binding.tabLayout.getTabAt(1))
+                showNewAccountTab()
+                binding.serverUrlInput.setText(account.url)
+                binding.usernameInput.setText(account.name)
+                binding.passwordInput.setText("")
+                binding.passwordInput.requestFocus()
+            }
         }
 
         return cardView

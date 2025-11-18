@@ -37,4 +37,8 @@
     <color name="card_background">#FF182631</color>
     <color name="card_selected">#FF314150</color>
     <color name="card_border">#FF182631</color>
+
+    <!-- Login account card colors -->
+    <color name="account_logged_in_background">#FF1E3A4A</color> <!-- Slightly lighter blue tint for logged in -->
+    <color name="account_logged_out_background">#FF1F2831</color> <!-- Slightly lighter gray for logged out -->
 </resources>
