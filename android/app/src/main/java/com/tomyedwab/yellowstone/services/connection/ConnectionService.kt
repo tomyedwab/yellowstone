@@ -27,7 +27,6 @@ enum class JobType {
     APP_COMPONENTS,
     EVENT_SYNC,
     PUBLISH_EVENT,
-    EVENT_POLL,
 }
 
 data class JobParameters(
@@ -40,7 +39,6 @@ data class JobParameters(
     val accessToken: String?,
     val backendComponentIDs: BackendComponentIDs?,
     val eventToPublish: PendingEvent?,
-    val currentEventIDs: Map<String, Int>?,
 )
 
 class ConnectionServiceCoroutineManager(
@@ -52,11 +50,14 @@ class ConnectionServiceCoroutineManager(
     private val coroutineScope = CoroutineScope(dispatcher)
     private var currentJob: Job? = null
     private var currentJobParameters: JobParameters? = null
+    private var pollingJob: Job? = null
+    private var pollingJobAccessToken: String? = null
     private val gson = Gson()
     private val jsonMediaType = "application/json".toMediaType()
 
     fun shutdown() {
         currentJob?.cancel()
+        pollingJob?.cancel()
         coroutineScope.cancel()
     }
 
@@ -77,7 +78,6 @@ class ConnectionServiceCoroutineManager(
                     null,
                     null,
                     null,
-                    null,
                 )
             }
 
@@ -89,7 +89,6 @@ class ConnectionServiceCoroutineManager(
                     null,
                     null,
                     state.refreshToken,
-                    null,
                     null,
                     null,
                     null,
@@ -107,7 +106,6 @@ class ConnectionServiceCoroutineManager(
                     state.accessToken,
                     null,
                     null,
-                    null,
                 )
             }
 
@@ -121,7 +119,6 @@ class ConnectionServiceCoroutineManager(
                     state.refreshToken,
                     state.accessToken,
                     state.backendComponentIDs,
-                    null,
                     null,
                 )
             }
@@ -140,26 +137,48 @@ class ConnectionServiceCoroutineManager(
                         state.accessToken,
                         state.backendComponentIDs,
                         state.pendingEvents[0],
-                        null,
                     )
                 } else {
-                    Timber.d("Creating EVENT_POLL job")
-                    JobParameters(
-                        JobType.EVENT_POLL,
-                        state.loginAccount.url,
-                        null,
-                        null,
-                        null,
-                        state.refreshToken,
-                        state.accessToken,
-                        state.backendComponentIDs,
-                        null,
-                        state.backendEventIDs,
-                    )
+                    null
                 }
             }
 
             else -> null
+        }
+
+        if (state is HubConnectionState.Connected) {
+            if (pollingJob != null && state.accessToken != pollingJobAccessToken) {
+                Timber.d("Restarting polling job")
+                pollingJobAccessToken = state.accessToken
+                var oldJob = pollingJob!!
+                pollingJob = coroutineScope.launch {
+                    oldJob.cancel()
+                    oldJob.join()
+                    pollEvents(
+                        state.loginAccount.url,
+                        state.refreshToken,
+                        state.accessToken,
+                        state.backendEventIDs,
+                    )
+                }
+            } else if (pollingJob == null) {
+                Timber.d("Starting polling job")
+                pollingJobAccessToken = state.accessToken
+                pollingJob = coroutineScope.launch {
+                    pollEvents(
+                        state.loginAccount.url,
+                        state.refreshToken,
+                        state.accessToken,
+                        state.backendEventIDs,
+                    )
+                }
+            }
+        } else {
+            if (pollingJob != null) {
+                Timber.d("Stopping polling job")
+                pollingJob?.cancel()
+                pollingJob = null
+            }
         }
 
         if (desiredJobParameters != currentJobParameters) {
@@ -226,15 +245,6 @@ class ConnectionServiceCoroutineManager(
                                 Timber.d("Exception type: ${e::class.simpleName}")
                                 throw e
                             }
-                        }
-
-                        JobType.EVENT_POLL -> {
-                            pollEvents(
-                                desiredJobParameters.url,
-                                desiredJobParameters.refreshToken!!,
-                                desiredJobParameters.accessToken!!,
-                                desiredJobParameters.currentEventIDs!!,
-                            )
                         }
                     }
                 }
@@ -656,6 +666,7 @@ class ConnectionServiceCoroutineManager(
     ) {
         Timber.d("pollEvents called with initial event IDs: $initialEventIDs")
         var currentEventIDs = initialEventIDs
+        var retriesRemaining = 10
 
         while (true) {
             try {
@@ -687,6 +698,7 @@ class ConnectionServiceCoroutineManager(
                                     object : TypeToken<Map<String, Int>>() {}.type
                                 ) as
                                         Map<String, Int>
+                            retriesRemaining = 10
                             currentEventIDs = data
                             Timber.d("Dispatching EventsUpdated with data: $data")
                             stateDispatcher.dispatch(ConnectionAction.EventsUpdated(data))
@@ -698,6 +710,7 @@ class ConnectionServiceCoroutineManager(
                             stateDispatcher.dispatch(
                                 ConnectionAction.EventsUpdated(currentEventIDs)
                             )
+                            retriesRemaining = 10
                         }
 
                         else -> {
@@ -706,22 +719,33 @@ class ConnectionServiceCoroutineManager(
                         }
                     }
                 }
-            } catch (e: UnauthenticatedError) {
-                Timber.e(e, "UnauthenticatedError during polling: ${e.message}")
-                stateDispatcher.dispatch(
-                    ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
-                )
             } catch (e: CancellationException) {
                 Timber.d("Polling cancelled.")
                 // The coroutine was cancelled, so there is no need to dispatch any action
                 return
+            } catch (e: UnauthenticatedError) {
+                if (retriesRemaining > 0) {
+                    retriesRemaining--
+                    Timber.e(e, "UnauthenticatedError during polling: ${e.message}. Trying to refresh token...")
+                    sendAccessTokenRequest(url, refreshToken)
+                } else {
+                    Timber.e(e, "UnauthenticatedError during polling: ${e.message}. Giving up.")
+                    // Kick us back out to the login screen
+                    stateDispatcher.dispatch(
+                        ConnectionAction.AccessTokenRevoked(e.message ?: "Unknown error")
+                    )
+                }
             } catch (e: Exception) {
-                // In production, this should transition to "reconnecting" state
-                Timber.e(e, "Exception during polling: ${e.message}")
-                stateDispatcher.dispatch(
-                    ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
-                )
-                break // Exit the polling loop on error
+                if (retriesRemaining > 0) {
+                    retriesRemaining--
+                    Timber.w("Poll failed with error: ${e.message}. Retrying...")
+                } else {
+                    Timber.e(e, "Exception during polling: ${e.message}")
+                    stateDispatcher.dispatch(
+                        ConnectionAction.ConnectionFailed("Polling failed: ${e.message}")
+                    )
+                    return
+                }
             }
         }
     }

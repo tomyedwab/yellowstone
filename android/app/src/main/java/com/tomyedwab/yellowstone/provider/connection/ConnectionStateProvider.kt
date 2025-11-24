@@ -15,7 +15,8 @@ interface StateDispatcher {
 }
 
 class ConnectionStateProvider : ViewModel(), StateDispatcher {
-    private val _connectionState: MutableLiveData<HubConnectionState> = MutableLiveData(HubConnectionState.Uninitialized())
+    private val _connectionState: MutableLiveData<HubConnectionState> =
+        MutableLiveData(HubConnectionState.Uninitialized())
     val connectionState: LiveData<HubConnectionState> = _connectionState
     private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -132,7 +133,7 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
             }
 
             is ConnectionAction.RefreshTokenInvalid -> {
-                 when (state) {
+                when (state) {
                     is HubConnectionState.Connecting.RefreshingAccessToken -> {
                         // If the refresh token was invalidated for some reason,
                         // we will discover it when we try to refresh the access
@@ -145,7 +146,8 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                                 it
                             }
                         }
-                        val updatedLoginAccount = updatedAccounts.find { it.id == state.loginAccount.id } ?: state.loginAccount
+                        val updatedLoginAccount =
+                            updatedAccounts.find { it.id == state.loginAccount.id } ?: state.loginAccount
 
                         HubConnectionState.WaitingForLogin(
                             HubAccountList(
@@ -261,8 +263,20 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                         }
                     }
 
+                    is HubConnectionState.Connected -> {
+                        HubConnectionState.Connected(
+                            state.accountList,
+                            state.loginAccount,
+                            action.refreshToken,
+                            action.accessToken,
+                            state.backendComponentIDs,
+                            state.backendEventIDs,
+                            state.pendingEvents,
+                        )
+                    }
+
                     // This event only makes sense in this one particular state
-                    else ->  state
+                    else -> state
                 }
             }
 
@@ -341,6 +355,7 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                             state.pendingEvents,
                         )
                     }
+
                     else -> state
                 }
             }
@@ -358,6 +373,7 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                             state.pendingEvents + action.event,
                         )
                     }
+
                     else -> state
                 }
             }
@@ -375,6 +391,7 @@ class ConnectionStateProvider : ViewModel(), StateDispatcher {
                             state.pendingEvents.filterNot { it.clientId == action.clientId },
                         )
                     }
+
                     else -> state
                 }
             }
